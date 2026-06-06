@@ -175,22 +175,14 @@ section[data-testid="stSidebar"] [data-testid="stDownloadButton"] button {
     display: flex;
     align-items: center;
     gap: 8px;
+    margin-bottom: -1px;
 }
-.answer-card-body {
-    background: #f8faff;
-    border: 1px solid #c7d9f8;
-    border-top: none;
-    border-radius: 0 0 10px 10px;
-    padding: 18px 20px;
-    min-height: 180px;
+/* ── Answer card border color ─────────────────────────────── */
+[data-testid="stVerticalBlockBorderWrapper"] {
+    border-color: #c7d9f8 !important;
+    border-radius: 10px !important;
+    background: #f8faff !important;
 }
-.answer-placeholder {
-    text-align: center;
-    padding: 48px 20px;
-    color: #94a3b8;
-    font-size: 0.9rem;
-}
-.answer-placeholder .icon { font-size: 2rem; margin-bottom: 8px; }
 
 /* ── Input section ───────────────────────────────────────── */
 .input-section-label {
@@ -537,30 +529,34 @@ with tab_exercise:
 
     # ── RIGHT: Answer panel ───────────────────────────────────────────────
     with right:
-        st.markdown("""
-        <div class="answer-card-header">
-            📖 &nbsp;เฉลยละเอียด
-        </div>
-        <div class="answer-card-body">
-        """, unsafe_allow_html=True)
-
-        if not st.session_state.show_ans:
+        with st.container(border=True):
             st.markdown("""
-            <div class="answer-placeholder">
-                <div class="icon">🔒</div>
-                กดปุ่มด้านล่างเพื่อเปิดเฉลย
-            </div>
+            <div style="
+                background: linear-gradient(135deg,#1e40af,#2563eb);
+                color: white;
+                border-radius: 6px;
+                padding: 9px 14px;
+                font-size: 0.85rem;
+                font-weight: 700;
+                letter-spacing: 0.03em;
+                margin: -1px -1px 14px -1px;
+            ">📖 &nbsp;เฉลยละเอียด</div>
             """, unsafe_allow_html=True)
-        else:
-            if answer:
-                st.markdown(answer)
-            else:
-                st.info("ยังไม่มีเฉลยสำหรับข้อนี้")
 
-        st.markdown("</div>", unsafe_allow_html=True)
+            if not st.session_state.show_ans:
+                st.markdown("""
+                <div style="text-align:center;padding:40px 16px;color:#94a3b8;">
+                    <div style="font-size:2rem;margin-bottom:8px;">🔒</div>
+                    <div style="font-size:0.88rem;">กดปุ่มด้านล่างเพื่อเปิดเฉลย</div>
+                </div>
+                """, unsafe_allow_html=True)
+            else:
+                if answer:
+                    st.markdown(answer)
+                else:
+                    st.info("ยังไม่มีเฉลยสำหรับข้อนี้")
 
         btn_label = "🙈  ซ่อนเฉลย" if st.session_state.show_ans else "👁  แสดงเฉลย"
-        st.markdown("<div style='margin-top:8px'></div>", unsafe_allow_html=True)
         if st.button(btn_label, key="toggle_ans", use_container_width=True):
             st.session_state.show_ans = not st.session_state.show_ans
             st.rerun()
