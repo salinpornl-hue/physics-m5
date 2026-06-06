@@ -413,7 +413,7 @@ def _fig_conditions():
              'Crest meets crest'),
             (CRED, '#fef2f2', '#fecaca',
              'DESTRUCTIVE  (Node)',
-             r'$\Delta r = \!\left(n-\tfrac{1}{2}\right)\!\lambda$',
+             r'$\Delta r = (n - \frac{1}{2})\,\lambda$',
              r'$n = 1,\;2,\;3,\;\ldots$',
              'Amplitude = 0',
              'Crest meets trough'),
@@ -637,81 +637,143 @@ def _fig_ruler():
                 ax.plot([xi, xi], [-0.17, -0.60], color=CRED,
                         lw=0.8, alpha=0.5)
 
-        # Legend + header
-        ax.text(5.0, 3.1,
+        # Header text
+        ax.text(5.0, 2.85,
                 f'd = {int(d)} cm,  λ = {int(lam)} cm   '
                 f'→   Antinodes = {int(d/lam)*2+1},  Nodes = {int(d/lam)*2}',
                 ha='center', fontsize=11, fontweight='700', color=CDK,
                 bbox=dict(boxstyle='round,pad=0.4', fc='#f1f5f9',
                           ec='#cbd5e1', lw=1.8))
-        h1 = mpatches.Patch(color=CG,   label='Antinode ◆ (constructive)')
-        h2 = mpatches.Patch(color=CRED, label='Node ▼ (destructive)')
+        # Legend inside axes (no bbox_to_anchor)
+        h1 = mpatches.Patch(color=CG,   label='Antinode  (constructive)')
+        h2 = mpatches.Patch(color=CRED, label='Node  (destructive)')
         ax.legend(handles=[h1, h2], fontsize=9,
-                  loc='upper right', bbox_to_anchor=(1.0, 3.1),
+                  loc='upper left',
                   framealpha=0.95, edgecolor='#e2e8f0')
         fig.tight_layout()
     return fig
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-#  FIGURE 7 — Anti-phase sources: wave comparison
+#  FIGURE 7 — Phase comparison: in-phase vs anti-phase (3-row × 2-col)
 # ═══════════════════════════════════════════════════════════════════════════════
 def _fig_antiphase_waves():
-    """2×3 grid comparing in-phase vs anti-phase sources at Δr=0 and Δr=λ/2."""
+    """
+    Clear 3-row × 2-col comparison:
+      Left  col = In-phase sources  (Δφ = 0)
+      Right col = Anti-phase sources (Δφ = π)
+      Row 1 = Wave from S₁
+      Row 2 = Wave from S₂
+      Row 3 = Resultant  (what the water surface looks like)
+    """
     with plt.rc_context(RC):
-        fig, axes = plt.subplots(2, 3, figsize=(11, 5.8),
-                                 gridspec_kw={'hspace': 0.72, 'wspace': 0.22})
+        fig = plt.figure(figsize=(11, 7.5))
         fig.patch.set_facecolor(CBG)
-        x = np.linspace(0, 2, 500)
 
-        rows = [
-            # (src_phase, extra_phase, label, result_col, bg, at_what)
-            (0,      0,      'In-phase sources   Δr = 0',      CG,   '#f0fdf4', 'ANTINODE'),
-            (np.pi,  0,      'Anti-phase sources   Δr = 0',    CRED, '#fff5f5', 'NODE'),
+        # GridSpec: 3 rows, 2 cols + left margin col for row labels
+        from matplotlib.gridspec import GridSpec
+        gs = GridSpec(3, 2, figure=fig,
+                      hspace=0.55, wspace=0.30,
+                      left=0.13, right=0.97, top=0.90, bottom=0.07)
+
+        x = np.linspace(0, 2, 600)  # 2 wavelengths
+
+        col_configs = [
+            # (source_phase, col_title, col_title_col, bg_waves, bg_result,
+            #  result_col, outcome_lbl)
+            (0,      'IN-PHASE sources\n(เฟสตรงกัน,  Δφ = 0)',
+             CG,   '#f0f7ff', '#f0fdf4', CG,   'ปฏิบัพ\n(ANTINODE)\nAmplitude = 2A'),
+            (np.pi, 'ANTI-PHASE sources\n(เฟสตรงข้าม,  Δφ = π)',
+             CRED, '#fff8f8', '#fff5f5', CRED, 'บัพ\n(NODE)\nAmplitude = 0'),
         ]
-        for row, (sp, ep, row_lbl, rcol, rbg, outcome) in enumerate(rows):
+
+        row_labels  = ['Wave from S₁', 'Wave from S₂', 'Resultant\n(water surface)']
+        row_colors  = [CB, CR, CGR]
+
+        for col_i, (src_phase, col_title, title_col,
+                    bg_wave, bg_res, rcol, outcome) in enumerate(col_configs):
+
             w1  = np.sin(2 * np.pi * x)
-            w2  = np.sin(2 * np.pi * x + sp + ep)
+            w2  = np.sin(2 * np.pi * x + src_phase)
             res = w1 + w2
+            waves = [w1, w2, res]
+            wave_cols = [CB, CR, rcol]
 
-            panel_waves  = [w1, w2, res]
-            panel_cols   = [CB, CR, rcol]
-            panel_titles = ['Wave 1  (S₁)', 'Wave 2  (S₂)', 'Resultant']
+            for row_i, (y, wc) in enumerate(zip(waves, wave_cols)):
+                ax = fig.add_subplot(gs[row_i, col_i])
+                bg = bg_res if row_i == 2 else bg_wave
+                ax.set_facecolor(bg)
 
-            for col_i, (y, pc, pt) in enumerate(
-                    zip(panel_waves, panel_cols, panel_titles)):
-                ax = axes[row, col_i]
-                ax.set_facecolor(rbg)
+                # Fill crest/trough
+                fill_c = '#bbf7d0' if (row_i == 2 and rcol == CG) else \
+                         '#fecaca' if (row_i == 2 and rcol == CRED) else '#dbeafe'
                 ax.fill_between(x, y, 0, where=(y >= 0),
-                                color='#bfdbfe' if col_i < 2 else
-                                ('#bbf7d0' if rcol == CG else '#fecaca'),
-                                alpha=0.45)
-                ax.plot(x, y, color=pc, lw=2.4)
-                ax.axhline(0, color='#94a3b8', lw=0.8, ls=':')
-                ax.set_xlim(0, 2); ax.set_ylim(-2.5, 2.5)
-                ax.set_xticks([0, 0.5, 1, 1.5, 2])
-                ax.set_xticklabels(['0','λ/2','λ','3λ/2','2λ'], fontsize=8)
-                ax.set_yticks([-2, 0, 2])
-                ax.set_yticklabels(['-2A','0','+2A'], fontsize=8)
+                                color=fill_c, alpha=0.50)
+                ax.fill_between(x, y, 0, where=(y < 0),
+                                color=fill_c, alpha=0.20)
+
+                ax.plot(x, y, color=wc, lw=2.6, solid_capstyle='round')
+                ax.axhline(0, color='#94a3b8', lw=0.9, ls=':', zorder=1)
+
+                # Amplitude dashed lines
+                amax = np.max(np.abs(y))
+                if amax > 0.05:
+                    ax.axhline( amax, color=wc, lw=1.0, ls='--', alpha=0.4)
+                    ax.axhline(-amax, color=wc, lw=1.0, ls='--', alpha=0.4)
+
+                ax.set_xlim(0, 2); ax.set_ylim(-2.6, 2.6)
+                ax.set_xticks([0, 0.5, 1.0, 1.5, 2.0])
+                ax.set_xticklabels(['0','λ/2','λ','3λ/2','2λ'], fontsize=8.5)
+                ax.set_yticks([-2, -1, 0, 1, 2])
+                ax.set_yticklabels(['-2A','-A','0','+A','+2A'], fontsize=8.5)
                 ax.spines[['top','right']].set_visible(False)
-                ax.set_title(pt, color=pc, fontsize=9.5, fontweight='bold', pad=4)
 
-                if col_i == 2:
-                    amax = np.max(np.abs(res))
-                    badge_col = CG if outcome == 'ANTINODE' else CRED
-                    ax.text(0.97, 0.93, f'→ {outcome}',
-                            transform=ax.transAxes, ha='right', va='top',
-                            fontsize=9.5, fontweight='800', color=badge_col,
-                            bbox=dict(boxstyle='round,pad=0.3',
-                                      fc='white', ec=badge_col, lw=1.8))
+                # Amplitude label on y-axis right side
+                if amax > 0.05:
+                    ax.text(2.05, amax, f'{amax:.0f}A',
+                            color=wc, fontsize=9, va='center',
+                            fontweight='bold')
 
-            axes[row, 0].set_ylabel(row_lbl, color=rcol,
-                                    fontsize=9, fontweight='800', labelpad=6)
+                # Row label (left side, only for left column)
+                if col_i == 0:
+                    ax.set_ylabel(row_labels[row_i],
+                                  color=row_colors[row_i],
+                                  fontsize=9.5, fontweight='700',
+                                  labelpad=8)
 
+                # Result badge (bottom-right of resultant row)
+                if row_i == 2:
+                    badge_fc  = '#dcfce7' if rcol == CG else '#fee2e2'
+                    ax.text(0.97, 0.08, outcome,
+                            transform=ax.transAxes,
+                            ha='right', va='bottom',
+                            fontsize=10, fontweight='900',
+                            color=rcol,
+                            bbox=dict(boxstyle='round,pad=0.35',
+                                      fc=badge_fc, ec=rcol, lw=2.2))
+                    # Flat-surface note for anti-phase
+                    if rcol == CRED and amax < 0.05:
+                        ax.text(1.0, 0.6, 'Water surface\nstays flat',
+                                transform=ax.transAxes,
+                                ha='center', va='center',
+                                fontsize=11, color=CRED,
+                                fontweight='bold')
+
+            # Column title at top
+            ax_top = fig.add_subplot(gs[0, col_i])
+            ax_top.set_title(col_title, fontsize=10.5,
+                             color=title_col, fontweight='800', pad=8)
+
+        # Grand title
         fig.suptitle(
-            'Effect of source phase  —  same Δr, different source phase',
-            fontsize=11, fontweight='bold', color=CDK, y=1.01)
-        fig.tight_layout()
+            'In-phase vs Anti-phase Sources  (Δr = 0 at point P)',
+            fontsize=12, fontweight='bold', color=CDK, y=0.97)
+
+        # Vertical divider
+        fig.add_artist(
+            plt.Line2D([0.545, 0.545], [0.05, 0.93],
+                       transform=fig.transFigure,
+                       color='#e2e8f0', lw=1.5, ls='--'))
     return fig
 
 
@@ -1106,11 +1168,12 @@ def render_summary():
     st.markdown('<hr class="div"><p class="sh"><span class="pill">08</span>กรณีพิเศษ: แหล่งกำเนิดเฟสตรงข้าม</p>',
                 unsafe_allow_html=True)
 
-    c1, c2 = st.columns([1.1, 1], gap="large")
+    _show(_fig_antiphase_waves,
+          "ซ้าย: แหล่งกำเนิดเฟสตรงกัน → ปฏิบัพ (ผิวน้ำสูง 2A) &nbsp;|&nbsp; "
+          "ขวา: แหล่งกำเนิดเฟสตรงข้าม → บัพ (ผิวน้ำนิ่ง)")
+
+    c1, c2 = st.columns(2, gap="large")
     with c1:
-        _show(_fig_antiphase_waves,
-              "บน: เฟสตรงกัน Δr=0 → ปฏิบัพ &nbsp;|&nbsp; ล่าง: เฟสตรงข้าม Δr=0 → บัพ")
-    with c2:
         st.markdown("""
 <div class="card cr">
 <h4>เงื่อนไขสลับกันทั้งหมด!</h4>
@@ -1131,6 +1194,7 @@ def render_summary():
 </tbody>
 </table>
 """, unsafe_allow_html=True)
+    with c2:
         st.markdown("""
 <div class="card cy" style="margin-top:10px">
 <h4>เหตุผล</h4>
