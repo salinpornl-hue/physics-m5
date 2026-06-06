@@ -475,6 +475,69 @@ def _q32():
                    'Q32: Deep→Shallow\nθ₁=60°, v₁=2v₂ → θ₂≈26°',
                    v_ratio='v₁ = 2v₂')
 
+def _q33():
+    """Q33: deep→shallow, wavefront at 30° to boundary → θ₁≈41.8°"""
+    fig, ax = plt.subplots(figsize=(7, 6))
+    ax.set_xlim(-4, 4); ax.set_ylim(-3.5, 4)
+    ax.set_aspect('equal')
+
+    ax.axhline(0, color='k', lw=2, ls='--')
+    ax.axvline(0, color='gray', lw=1, ls=':', alpha=0.7)
+
+    th1 = np.radians(41.8)   # incident angle from normal (in deep water)
+    th2 = np.radians(30)     # refracted angle from normal (in shallow water)
+    L = 3.0
+
+    # Incident ray
+    ix, iy = -L*np.sin(th1), L*np.cos(th1)
+    ax.annotate('', xy=(0, 0), xytext=(ix, iy),
+                arrowprops=dict(arrowstyle='->', color='blue', lw=2.5, mutation_scale=15))
+
+    # Refracted ray
+    rx, ry = L*np.sin(th2), -L*np.cos(th2)
+    ax.annotate('', xy=(rx, ry), xytext=(0, 0),
+                arrowprops=dict(arrowstyle='->', color='red', lw=2.5, mutation_scale=15))
+
+    # Angle arcs
+    arc1 = np.linspace(np.pi/2, np.pi/2 + th1, 40)
+    ax.plot(0.8*np.cos(arc1), 0.8*np.sin(arc1), 'blue', lw=1.5)
+    ax.text(-0.65, 0.9, f'θ₁≈41.8°', color='blue', fontsize=10, ha='right')
+
+    arc2 = np.linspace(-np.pi/2, -np.pi/2 + th2, 40)
+    ax.plot(0.8*np.cos(arc2), 0.8*np.sin(arc2), 'red', lw=1.5)
+    ax.text(0.5, -0.85, 'θ₂=30°', color='red', fontsize=10)
+
+    # Wavefront lines (perpendicular to ray)
+    for k in range(4):
+        d = (k+1)*0.6
+        # incident wavefronts in deep region
+        cx, cy = -d*np.sin(th1), d*np.cos(th1)
+        perp_x = np.cos(th1+np.pi/2)
+        perp_y = np.sin(th1+np.pi/2)
+        ax.plot([cx-perp_x, cx+perp_x], [cy-perp_y, cy+perp_y], 'b-', lw=1, alpha=0.5)
+
+    for k in range(4):
+        d = (k+0.5)*0.55
+        cx, cy = d*np.sin(th2), -d*np.cos(th2)
+        perp_x = np.cos(th2+np.pi/2)
+        perp_y = np.sin(th2+np.pi/2)
+        ax.plot([cx-perp_x, cx+perp_x], [cy-perp_y, cy+perp_y], 'r-', lw=1, alpha=0.5)
+
+    # λ labels
+    ax.text(-3.5, 2.2, 'น้ำลึก\nλ₁=2 cm', fontsize=10, color='blue',
+            bbox=dict(boxstyle='round,pad=0.2', fc='lightblue', alpha=0.5))
+    ax.text(-3.5, -2.5, 'น้ำตื้น\nλ₂=1.5 cm', fontsize=10, color='red',
+            bbox=dict(boxstyle='round,pad=0.2', fc='lightyellow', alpha=0.5))
+
+    # Wavefront angle label on boundary
+    ax.text(1.4, 0.2, '30° จากรอยต่อ', fontsize=9, color='darkred')
+
+    ax.set_title('Q33: น้ำลึก→น้ำตื้น\nλ₁=2cm, λ₂=1.5cm, θ₂จาก normal=30° → θ₁≈41.8°', fontsize=10)
+    ax.axis('off')
+    fig.tight_layout()
+    return fig
+
+
 def _q34():
     """Q34 wavefront diagram from PDF: parallel wavefronts in A and B with boundary"""
     fig, ax = plt.subplots(figsize=(7, 6))
@@ -1184,6 +1247,44 @@ def _q61():
     return fig
 
 # ════════════════════════════════════════════════════════════════════════════
+# Q62 — guitar string: 2 loops (T=40N) vs 3 loops (T=90N)
+# ════════════════════════════════════════════════════════════════════════════
+def _q62():
+    fig, axes = plt.subplots(1, 2, figsize=(11, 3.5))
+    L = 0.75   # 75 cm vibrating length
+    mu = 0.01296  # kg/m (12.96 g / 1 m)
+
+    configs = [
+        (40, 2, 'T = 40 N → n = 2 loops'),
+        (90, 3, 'T = 90 N → n = 3 loops'),
+    ]
+    for ax, (T, n, title) in zip(axes, configs):
+        v = np.sqrt(T / mu)
+        f = n * v / (2 * L)
+        x = np.linspace(0, L, 400)
+        ax.fill_between(x, np.sin(n*np.pi*x/L)*0.8, -np.sin(n*np.pi*x/L)*0.8,
+                        alpha=0.15, color='blue')
+        ax.plot(x,  np.sin(n*np.pi*x/L)*0.8, 'b-', lw=2.5)
+        ax.plot(x, -np.sin(n*np.pi*x/L)*0.8, 'b--', lw=1.5, alpha=0.5)
+        ax.axhline(0, color='k', lw=1)
+        ax.plot(0, 0, 'ks', ms=10, zorder=5)
+        ax.plot(L, 0, 'ks', ms=10, zorder=5)
+        # Node markers
+        nodes = np.linspace(0, L, n+1)
+        ax.plot(nodes, np.zeros_like(nodes), 'rv', ms=7, zorder=5)
+        ax.annotate('', xy=(L, -1.2), xytext=(0, -1.2),
+                    arrowprops=dict(arrowstyle='<->', color='k', lw=1.5))
+        ax.text(L/2, -1.5, f'L = 75 cm', ha='center', fontsize=9)
+        ax.set_xlim(-0.03, L+0.03); ax.set_ylim(-2, 1.4)
+        ax.set_title(f'{title}\nv={v:.1f} cm/s, f={f:.1f} Hz', fontsize=9)
+        ax.axis('off')
+
+    fig.suptitle('Q62: สายกีตาร์ L=75cm, μ=0.01296 kg/m — เปรียบเทียบ 2 กรณี', y=1.02)
+    fig.tight_layout()
+    return fig
+
+
+# ════════════════════════════════════════════════════════════════════════════
 # Q63 — single slit a=6cm, λ=2cm
 # ════════════════════════════════════════════════════════════════════════════
 def _q63():
@@ -1281,13 +1382,13 @@ _PLOT_MAP = {
     13:_q13, 17:_q17, 20:_q20,
     24:_q24, 26:_q26, 27:_q27,
     28:_q28, 29:_q29, 30:_q30, 31:_q31,
-    32:_q32, 34:_q34, 35:_q35, 36:_q36, 37:_q37, 38:_q38, 39:_q39,
+    32:_q32, 33:_q33, 34:_q34, 35:_q35, 36:_q36, 37:_q37, 38:_q38, 39:_q39,
     41:_q41, 42:_q42,
     43:_q43, 44:_q44,
     47:_q47, 48:_q48, 49:_q49,
     50:_q50, 51:_q51, 52:_q52,
     53:_q53, 54:_q54, 55:_q55, 56:_q56, 57:_q57,
-    59:_q59, 60:_q60, 61:_q61,
+    59:_q59, 60:_q60, 61:_q61, 62:_q62,
     63:_q63, 64:_q64, 68:_q68,
 }
 
