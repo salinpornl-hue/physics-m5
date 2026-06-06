@@ -963,6 +963,7 @@ def _fig_interference_linked():
     Right: 3-row wave panels (W1 / W2 / Resultant) for each point.
     """
     with plt.rc_context(RC):
+        from matplotlib.gridspec import GridSpec
         fig = plt.figure(figsize=(14, 8.0))
         outer = GridSpec(1, 2, figure=fig,
                          width_ratios=[1.55, 1],
@@ -1109,7 +1110,12 @@ def _fig_interference_linked():
             (wA2, CR,   'W₂  (from S₂,  r₂ = 4λ)'),
             (wAr, CG,   'Resultant  =  2A'),
         ]
-        ylims_A = [(-1.3, 1.3), (-1.3, 1.3), (-2.5, 2.5)]
+        # (ticks, labels, ylim) for each of the 3 rows
+        _spec_A = [
+            ([-1, 0, 1], ['-A', '0', 'A'],   (-1.35, 1.35)),
+            ([-1, 0, 1], ['-A', '0', 'A'],   (-1.35, 1.35)),
+            ([-2, 0, 2], ['-2A', '0', '2A'], (-2.50, 2.50)),
+        ]
 
         # Header for antinode block
         axA[0].set_facecolor('#ecfdf5')
@@ -1119,20 +1125,15 @@ def _fig_interference_linked():
                     ha='center', va='bottom', fontsize=9.5,
                     fontweight='800', color=CG)
 
-        for ax_w, (w, col, lbl), ylim in zip(axA, wave_data_A, ylims_A):
+        for ax_w, (w, col, lbl), (tks, tkl, ylim) in zip(axA, wave_data_A, _spec_A):
             ax_w.set_facecolor('#ecfdf5' if col != CG else '#dcfce7')
             ax_w.axhline(0, color='#94a3b8', lw=0.8, ls=':')
             ax_w.plot(T, w, color=col, lw=2.2)
             ax_w.fill_between(T, 0, w, color=col, alpha=0.12)
             ax_w.set_xlim(0, 2); ax_w.set_ylim(*ylim)
-            ax_w.set_xticks([]); ax_w.tick_params(axis='y', labelsize=7)
-            ax_w.set_yticks([ylim[0], 0, ylim[1]])
-            ax_w.yaxis.set_major_formatter(
-                plt.FuncFormatter(lambda v, _:
-                    ('2A' if abs(v - ylim[1]) < 0.1
-                     else ('-2A' if abs(v - ylim[0]) < 0.1
-                           else '0')))
-            )
+            ax_w.set_xticks([])
+            ax_w.set_yticks(tks)
+            ax_w.set_yticklabels(tkl, fontsize=7)
             ax_w.text(0.01, 0.82, lbl, transform=ax_w.transAxes,
                       fontsize=8, color=col, fontweight='700',
                       va='center')
@@ -1161,7 +1162,11 @@ def _fig_interference_linked():
             (wN2, CR,   'W₂  (from S₂,  r₂ = 4λ)'),
             (wNr, '#94a3b8', 'Resultant  =  0'),
         ]
-        ylims_N = [(-1.3, 1.3), (-1.3, 1.3), (-2.5, 2.5)]
+        _spec_N = [
+            ([-1, 0, 1], ['-A', '0', 'A'],  (-1.35, 1.35)),
+            ([-1, 0, 1], ['-A', '0', 'A'],  (-1.35, 1.35)),
+            ([0],        ['0'],             (-1.35, 1.35)),   # flat zero
+        ]
 
         axN[0].set_facecolor('#fff1f2')
         axN[0].text(0.5, 1.18,
@@ -1170,21 +1175,16 @@ def _fig_interference_linked():
                     ha='center', va='bottom', fontsize=9.5,
                     fontweight='800', color=CRED)
 
-        for ax_w, (w, col, lbl), ylim in zip(axN, wave_data_N, ylims_N):
+        for ax_w, (w, col, lbl), (tks, tkl, ylim) in zip(axN, wave_data_N, _spec_N):
             bg = '#fff1f2' if col != '#94a3b8' else '#f1f5f9'
             ax_w.set_facecolor(bg)
             ax_w.axhline(0, color='#94a3b8', lw=0.8, ls=':')
             ax_w.plot(T, w, color=col, lw=2.2)
             ax_w.fill_between(T, 0, w, color=col, alpha=0.12)
             ax_w.set_xlim(0, 2); ax_w.set_ylim(*ylim)
-            ax_w.set_xticks([]); ax_w.tick_params(axis='y', labelsize=7)
-            ax_w.set_yticks([ylim[0], 0, ylim[1]])
-            ax_w.yaxis.set_major_formatter(
-                plt.FuncFormatter(lambda v, _:
-                    ('2A' if abs(v - ylim[1]) < 0.1
-                     else ('-2A' if abs(v - ylim[0]) < 0.1
-                           else '0')))
-            )
+            ax_w.set_xticks([])
+            ax_w.set_yticks(tks)
+            ax_w.set_yticklabels(tkl, fontsize=7)
             ax_w.text(0.01, 0.82, lbl, transform=ax_w.transAxes,
                       fontsize=8, color=col, fontweight='700',
                       va='center')
