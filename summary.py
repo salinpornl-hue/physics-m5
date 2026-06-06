@@ -818,126 +818,161 @@ def _fig_antiphase_waves():
 #  FIGURE 8 — Two openings in barrier (top view, line diagram only)
 # ═══════════════════════════════════════════════════════════════════════════════
 def _fig_barrier():
-    """Top-view line diagram: plane wave → barrier with 2 openings → interference."""
+    """
+    Top-view: plane wave → barrier with 2 openings → interference pattern.
+    Clean layout: left panel = incoming wave, right panel = rings + lines.
+    No formula box inside the figure (formulas are in Streamlit text below).
+    """
     with plt.rc_context(RC):
-        fig, ax = plt.subplots(figsize=(10, 6.5))
+        from matplotlib.patches import Rectangle
+
+        # ── Canvas ───────────────────────────────────────────────────────────
+        fig, ax = plt.subplots(figsize=(11, 6.5))
         ax.set_facecolor('#f0f7ff')
         fig.patch.set_facecolor('#f0f7ff')
-        ax.set_xlim(-4.5, 13); ax.set_ylim(-5.5, 5.5)
+
+        # Coordinate system: barrier at x=0, left panel x∈[-6,0], right x∈[0,12]
+        X_LEFT  = -6.0
+        X_RIGHT = 12.5
+        Y_MAX   = 5.2
+        ax.set_xlim(X_LEFT - 0.5, X_RIGHT + 0.3)
+        ax.set_ylim(-Y_MAX - 0.5, Y_MAX + 0.5)
         ax.set_aspect('equal')
         ax.axis('off')
 
-        d = 2.0; lam = 0.6
-        s1 = np.array([0.0,  d/2])
-        s2 = np.array([0.0, -d/2])
+        # ── Parameters ───────────────────────────────────────────────────────
+        d     = 2.0   # source separation (cm)
+        lam   = 0.6   # wavelength (cm)
         n_max = 3
+        s1    = np.array([0.0,  d / 2])   # top opening O₁
+        s2    = np.array([0.0, -d / 2])   # bottom opening O₂
 
-        # ── Left: incoming plane wave ──
-        for xi in np.arange(-4, 0, lam):
-            ax.plot([xi, xi], [-5.2, -d/2 - 0.15], color=CB,
-                    lw=1.5, alpha=0.5, solid_capstyle='round', zorder=7)
-            ax.plot([xi, xi], [d/2 + 0.15, 5.2], color=CB,
-                    lw=1.5, alpha=0.5, solid_capstyle='round', zorder=7)
+        # ── Incoming plane wave (left of barrier) ─────────────────────────
+        gap_disp = 0.28   # half-gap at opening in display coords
+        for xi in np.arange(X_LEFT + 0.3, -0.05, lam):
+            # Above top opening
+            ax.plot([xi, xi], [d / 2 + gap_disp, Y_MAX],
+                    color=CB, lw=1.4, alpha=0.55, zorder=8)
+            # Below bottom opening
+            ax.plot([xi, xi], [-Y_MAX, -d / 2 - gap_disp],
+                    color=CB, lw=1.4, alpha=0.55, zorder=8)
 
-        ax.annotate('', xy=(-0.5, 0), xytext=(-2.5, 0),
+        # Direction arrow (through gap)
+        ax.annotate('', xy=(-0.7, 0), xytext=(-3.8, 0),
                     arrowprops=dict(arrowstyle='->', color=CB,
-                                   lw=2.5, mutation_scale=16),
-                    zorder=8)
-        ax.text(-2.8, 0.6, 'Incoming\nplane wave', color=CB,
-                fontsize=9, ha='center', fontweight='600', zorder=8)
+                                   lw=2.2, mutation_scale=18),
+                    zorder=9)
+        # Label — centred in left panel, above arrow
+        ax.text((X_LEFT + 0) / 2, 1.4,
+                'Incoming\nplane wave', color=CB,
+                fontsize=9.5, ha='center', va='bottom',
+                fontweight='600', zorder=9)
 
-        # ── Barrier ──
-        gap = 0.25
-        for y0, y1 in [(-5.5, -(d/2 + gap)),
-                       (-(d/2 - gap), (d/2 - gap)),
-                       ((d/2 + gap), 5.5)]:
-            ax.fill_between([-0.22, 0.22], y0, y1,
-                            color='#475569', alpha=0.92, zorder=5)
-        ax.text(-0.9, -4.5, 'Barrier', color='#475569',
-                fontsize=9, ha='center', va='top', rotation=90)
+        # ── Barrier (thick vertical rectangle) ───────────────────────────
+        bw = 0.28   # half-width of barrier
+        gap = 0.28  # half-gap at each opening
+        for y0, y1 in [(-Y_MAX, -(d / 2 + gap)),
+                       (-(d / 2 - gap), (d / 2 - gap)),
+                       ((d / 2 + gap), Y_MAX)]:
+            rect = Rectangle((-bw, y0), 2 * bw, y1 - y0,
+                             fc='#475569', ec='none',
+                             alpha=0.92, zorder=6)
+            ax.add_patch(rect)
 
-        # Openings
-        for src, col, lbl in [(s1, CB, 'O₁'), (s2, CR, 'O₂')]:
-            ax.plot(*src, 'D', color=col, ms=10, zorder=8,
-                    markeredgecolor='white', markeredgewidth=1.5)
-            ax.text(0.45, src[1], lbl, color=col,
-                    fontsize=9.5, va='center', fontweight='700', zorder=8)
+        # "Barrier" label — horizontal, to the left of the barrier
+        ax.text(-bw - 0.25, -Y_MAX + 0.2,
+                'Barrier', color='#475569',
+                fontsize=8.5, ha='right', va='bottom', fontweight='600',
+                zorder=9)
 
-        # d annotation
-        ax.annotate('', xy=(-0.7, s1[1]), xytext=(-0.7, s2[1]),
-                    arrowprops=dict(arrowstyle='<->', color=CGR, lw=1.4))
-        ax.text(-1.05, 0, 'd', fontsize=13, color=CDK,
+        # ── d annotation (between openings) ──────────────────────────────
+        ax.annotate('', xy=(-1.2, s1[1]), xytext=(-1.2, s2[1]),
+                    arrowprops=dict(arrowstyle='<->', color=CGR, lw=1.5))
+        ax.text(-1.55, 0, 'd', fontsize=13, color=CDK,
                 ha='center', va='center', fontweight='bold')
 
-        # ── Right: circular wavefronts from O1 and O2 ──
+        # ── Opening markers ───────────────────────────────────────────────
+        for src, col, lbl in [(s1, CB, 'O₁'), (s2, CR, 'O₂')]:
+            ax.plot(*src, 'D', color=col, ms=10, zorder=10,
+                    markeredgecolor='white', markeredgewidth=1.5)
+            ax.text(0.55, src[1], lbl, color=col,
+                    fontsize=9.5, va='center', fontweight='700', zorder=10)
+
+        # ── Circular wavefronts (right half only) ────────────────────────
         for src, col in [(s1, CB), (s2, CR)]:
-            for n in range(1, 14):
-                r = n * lam
+            for n in range(1, 16):
+                r     = n * lam
+                alpha = max(0.05, 0.65 - n * 0.04)
+                lw_c  = 1.5 if n % 2 != 0 else 0.7
                 c = plt.Circle(src, r, color=col, fill=False,
-                               lw=1.6 if n % 2 != 0 else 0.8,
-                               alpha=max(0.06, 0.65 - n * 0.04),
-                               zorder=2)
+                               lw=lw_c, alpha=alpha, zorder=2)
                 ax.add_patch(c)
-        # Clip circular rings to x > 0 using a mask rectangle (below text zorder)
-        from matplotlib.patches import Rectangle
-        mask = Rectangle((-4.5, -5.5), 4.5, 11,
+
+        # Mask to hide rings on the LEFT side of the barrier
+        mask = Rectangle((X_LEFT - 0.5, -Y_MAX - 0.5),
+                         abs(X_LEFT) + 0.5 + bw, 2 * (Y_MAX + 0.5),
                          fc='#f0f7ff', ec='none', zorder=3)
         ax.add_patch(mask)
 
-        # ── Antinodal lines ──
-        R_MAX = 12
+        # ── Antinodal lines ───────────────────────────────────────────────
+        R_MAX = 11.8
         for n in range(-n_max, n_max + 1):
             v = n * lam / d
-            if abs(v) <= 1:
-                th = np.arcsin(v)
-                xe = R_MAX * np.cos(th); ye = R_MAX * np.sin(th)
-                ax.plot([0, xe], [0, ye], color=CG,
-                        lw=2.2 if n == 0 else 1.5, alpha=0.9, zorder=4)
-                lbl = 'A₀\n(central)' if n == 0 else f'A{abs(n)}'
-                ax.text(xe * 1.04, ye * 1.04, lbl, color=CG,
-                        fontsize=8.5, ha='center', va='center',
-                        fontweight='bold')
+            if abs(v) > 1:
+                continue
+            th  = np.arcsin(v)
+            xe  = R_MAX * np.cos(th)
+            ye  = R_MAX * np.sin(th)
+            lw_a = 2.3 if n == 0 else 1.6
+            ax.plot([0, xe], [0, ye], color=CG,
+                    lw=lw_a, alpha=0.9, zorder=4)
+            lbl = 'A₀  (central)' if n == 0 else f'A{abs(n)}'
+            ha  = 'left' if xe > 0 else 'right'
+            va  = ('bottom' if ye > 0.3 else
+                   'top'    if ye < -0.3 else 'center')
+            ax.text(xe * 1.05, ye * 1.05, lbl,
+                    color=CG, fontsize=8.5, fontweight='bold',
+                    ha=ha, va=va, zorder=5)
 
-        # Nodal lines
+        # ── Nodal lines ───────────────────────────────────────────────────
         for n in range(1, n_max + 1):
             for sign in [1, -1]:
                 v = (n - 0.5) * lam / d
-                if abs(v) <= 1:
-                    th = np.arcsin(sign * v)
-                    xe = R_MAX * np.cos(th); ye = R_MAX * np.sin(th)
-                    ax.plot([0, xe], [0, ye], color=CRED,
-                            lw=1.2, ls='--', alpha=0.7, zorder=3)
-                    ax.text(xe * 1.04, ye * 1.04, f'N{n}',
-                            color=CRED, fontsize=8, ha='center', va='center')
+                if abs(v) > 1:
+                    continue
+                th = np.arcsin(sign * v)
+                xe = R_MAX * np.cos(th)
+                ye = R_MAX * np.sin(th)
+                ax.plot([0, xe], [0, ye], color=CRED,
+                        lw=1.1, ls='--', alpha=0.7, zorder=4)
+                ha = 'left' if xe > 0 else 'right'
+                va = 'bottom' if ye > 0.3 else ('top' if ye < -0.3 else 'center')
+                ax.text(xe * 1.05, ye * 1.05, f'N{n}',
+                        color=CRED, fontsize=8, ha=ha, va=va, zorder=5)
 
-        # θ arc for n=1
+        # ── θ angle annotation (A₁ line) ─────────────────────────────────
         th1 = np.arcsin(lam / d)
-        arc = Arc((0, 0), 3.0, 3.0, angle=0,
+        arc = Arc((0, 0), 2.8, 2.8, angle=0,
                   theta1=0, theta2=np.degrees(th1),
-                  color='#9333ea', lw=2.0, zorder=5)
+                  color='#7c3aed', lw=2.0, zorder=7)
         ax.add_patch(arc)
-        ax.text(1.6, 0.42, 'θ', fontsize=14, color='#9333ea',
-                fontweight='bold', zorder=6)
+        ax.text(1.65, 0.38, 'θ₁', fontsize=12, color='#7c3aed',
+                fontweight='bold', zorder=8)
 
-        # L arrow
-        ax.annotate('', xy=(10, -5.3), xytext=(0, -5.3),
-                    arrowprops=dict(arrowstyle='<->', color=CGR, lw=1.4))
-        ax.text(5, -5.55, 'L  (distance from barrier)',
-                ha='center', fontsize=9, color=CGR)
+        # ── L distance arrow (bottom) ────────────────────────────────────
+        y_arr = -Y_MAX + 0.18
+        ax.annotate('', xy=(X_RIGHT - 0.5, y_arr), xytext=(0, y_arr),
+                    arrowprops=dict(arrowstyle='<->', color=CGR, lw=1.3))
+        ax.text((X_RIGHT - 0.5) / 2, y_arr - 0.45,
+                'L  (distance to measurement point)',
+                ha='center', fontsize=8.5, color=CGR, zorder=8)
 
-        # Formula box — placed inside the upper-right area of the plot
-        ax.text(6.5, 4.5,
-                r'$\sin\theta_n = \dfrac{n\lambda}{d}$'
-                '     '
-                r'$x_n = \dfrac{n\lambda L}{d}$',
-                fontsize=10.5, ha='center', fontweight='700', color=CDK,
-                bbox=dict(boxstyle='round,pad=0.5', fc='white',
-                          ec='#2563eb', lw=2.0), zorder=7)
-
+        # ── Figure title ─────────────────────────────────────────────────
         ax.set_title(
-            'Water wave — two openings in a barrier  (top view)',
-            fontsize=10, color=CDK, pad=6, fontweight='600')
-        fig.tight_layout(pad=0.4)
+            'Water wave through two openings in a barrier  —  top view',
+            fontsize=10.5, color=CDK, pad=7, fontweight='700')
+
+        fig.tight_layout(pad=0.5)
     return fig
 
 
