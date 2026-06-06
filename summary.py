@@ -83,7 +83,7 @@ def _show(func, cap=""):
 def _fig_two_sources():
     """Two point sources with solid crest rings, marking constructive/destructive points."""
     with plt.rc_context(RC):
-        fig, ax = plt.subplots(figsize=(8, 7))
+        fig, ax = plt.subplots(figsize=(7.5, 5.8))
         ax.set_aspect('equal')
         ax.set_facecolor('#f0f7ff')
         fig.patch.set_facecolor('#f0f7ff')
@@ -739,6 +739,10 @@ def _fig_antiphase_waves():
                 ax = fig.add_subplot(gs[row_i, col_i])
                 bg = bg_res if row_i == 2 else bg_wave
                 ax.set_facecolor(bg)
+                # Column title sits on the first-row axes (no separate axes needed)
+                if row_i == 0:
+                    ax.set_title(col_title, fontsize=10.5,
+                                 color=title_col, fontweight='800', pad=8)
 
                 # Fill crest/trough
                 fill_c = '#bbf7d0' if (row_i == 2 and rcol == CG) else \
@@ -795,10 +799,7 @@ def _fig_antiphase_waves():
                                 fontsize=11, color=CRED,
                                 fontweight='bold')
 
-            # Column title at top
-            ax_top = fig.add_subplot(gs[0, col_i])
-            ax_top.set_title(col_title, fontsize=10.5,
-                             color=title_col, fontweight='800', pad=8)
+            # (column title already set on row 0 axes above)
 
         # Grand title
         fig.suptitle(
@@ -834,15 +835,16 @@ def _fig_barrier():
         # ── Left: incoming plane wave ──
         for xi in np.arange(-4, 0, lam):
             ax.plot([xi, xi], [-5.2, -d/2 - 0.15], color=CB,
-                    lw=1.5, alpha=0.5, solid_capstyle='round')
+                    lw=1.5, alpha=0.5, solid_capstyle='round', zorder=7)
             ax.plot([xi, xi], [d/2 + 0.15, 5.2], color=CB,
-                    lw=1.5, alpha=0.5, solid_capstyle='round')
+                    lw=1.5, alpha=0.5, solid_capstyle='round', zorder=7)
 
         ax.annotate('', xy=(-0.5, 0), xytext=(-2.5, 0),
                     arrowprops=dict(arrowstyle='->', color=CB,
-                                   lw=2.5, mutation_scale=16))
+                                   lw=2.5, mutation_scale=16),
+                    zorder=8)
         ax.text(-2.8, 0.6, 'Incoming\nplane wave', color=CB,
-                fontsize=9, ha='center', fontweight='600')
+                fontsize=9, ha='center', fontweight='600', zorder=8)
 
         # ── Barrier ──
         gap = 0.25
@@ -876,10 +878,10 @@ def _fig_barrier():
                                alpha=max(0.06, 0.65 - n * 0.04),
                                zorder=2)
                 ax.add_patch(c)
-        # Clip right-side to x > 0 using a mask rectangle
+        # Clip circular rings to x > 0 using a mask rectangle (below text zorder)
         from matplotlib.patches import Rectangle
         mask = Rectangle((-4.5, -5.5), 4.5, 11,
-                         fc='#f0f7ff', ec='none', zorder=6)
+                         fc='#f0f7ff', ec='none', zorder=3)
         ax.add_patch(mask)
 
         # ── Antinodal lines ──
@@ -923,15 +925,17 @@ def _fig_barrier():
         ax.text(5, -5.55, 'L  (distance from barrier)',
                 ha='center', fontsize=9, color=CGR)
 
-        # Formula box
-        ax.text(5.5, 5.3,
-                r'$\sin\theta_n = n\lambda/d$   →   $x_n = n\lambda L/d$',
-                fontsize=11.5, ha='center', fontweight='700', color=CDK,
+        # Formula box — placed inside the upper-right area of the plot
+        ax.text(6.5, 4.5,
+                r'$\sin\theta_n = \dfrac{n\lambda}{d}$'
+                '     '
+                r'$x_n = \dfrac{n\lambda L}{d}$',
+                fontsize=10.5, ha='center', fontweight='700', color=CDK,
                 bbox=dict(boxstyle='round,pad=0.5', fc='white',
-                          ec='#2563eb', lw=2.2), zorder=7)
+                          ec='#2563eb', lw=2.0), zorder=7)
 
         ax.set_title(
-            'Water wave passing through two openings in a barrier — top view',
+            'Water wave — two openings in a barrier  (top view)',
             fontsize=10, color=CDK, pad=6, fontweight='600')
         fig.tight_layout(pad=0.4)
     return fig
