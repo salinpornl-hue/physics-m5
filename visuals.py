@@ -26,6 +26,24 @@ def get_plot_for_question(q_index):
         
         plt.tight_layout()
         return fig
+
+    elif q_index == 2:
+        fig, ax = plt.subplots(figsize=(6, 3))
+        # สร้างกราฟคลื่น sine จำลองตามรูปโจทย์
+        x = np.linspace(0, 10, 200)
+        y = np.sin(np.pi * x / 2) # จำลองรูปคลื่น
+        
+        ax.plot(x, y, color='purple', linewidth=2)
+        ax.set_title("Figure for Question 2: Wave at t = 0.5s")
+        ax.set_xlabel("Position (m)")
+        ax.set_ylabel("Displacement (cm)")
+        ax.grid(True, linestyle='--', alpha=0.6)
+        
+        # เพิ่มเส้นขีดบอกตำแหน่งสำคัญตามโจทย์ (ตัวอย่าง)
+        ax.axhline(0, color='black', linewidth=0.5)
+        
+        plt.tight_layout()
+        return fig
     
     # Add other questions here as we go...
     return None
