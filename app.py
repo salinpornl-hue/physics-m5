@@ -190,10 +190,10 @@ with st.sidebar:
 
     if "_pdf_bytes" in st.session_state:
         st.download_button(
-            "⬇ ดาวน์โหลด PDF",
+            "⬇ ดาวน์โหลด (เปิดใน browser → Ctrl+P)",
             data=st.session_state["_pdf_bytes"],
-            file_name="physics_problems.pdf",
-            mime="application/pdf",
+            file_name="physics_problems.html",
+            mime="text/html",
             use_container_width=True,
             key="dl_pdf_btn",
             type="primary",
