@@ -5,69 +5,255 @@ from answer_keys import ANSWER_KEYS, check_answer
 from summary import render_summary
 
 st.set_page_config(
-    page_title="ฟิสิกส์: คลื่นกล",
+    page_title="ฟิสิกส์ ม.5 — คลื่นกล",
     page_icon="🌊",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
-# ── Global CSS ────────────────────────────────────────────────────────────────
+# ═══════════════════════════════════════════════════════════════════════════════
+# GLOBAL CSS
+# ═══════════════════════════════════════════════════════════════════════════════
 st.markdown("""
 <style>
-/* ── Sidebar nav buttons: compact ── */
-section[data-testid="stSidebar"] .stButton > button {
-    padding: 1px 2px !important;
-    font-size: 0.72rem !important;
-    min-height: 26px !important;
-    height: 26px !important;
-    line-height: 1 !important;
+@import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap');
+
+/* ── Reset & base ─────────────────────────────────────────── */
+html, body, [class*="css"] {
+    font-family: 'Sarabun', 'Helvetica Neue', Arial, sans-serif;
 }
-/* ── Topic labels in sidebar ── */
+.block-container {
+    padding: 1.2rem 1.8rem 2rem !important;
+    max-width: 1400px;
+}
+
+/* ── Hide Streamlit chrome ───────────────────────────────── */
+#MainMenu, footer, header { visibility: hidden; }
+
+/* ── Sidebar ─────────────────────────────────────────────── */
+section[data-testid="stSidebar"] {
+    background: #0f172a;
+    border-right: none;
+}
+section[data-testid="stSidebar"] * {
+    color: #e2e8f0 !important;
+}
+section[data-testid="stSidebar"] .stButton > button {
+    background: #1e293b !important;
+    border: 1px solid #334155 !important;
+    color: #94a3b8 !important;
+    border-radius: 6px !important;
+    padding: 0 !important;
+    font-size: 0.70rem !important;
+    min-height: 24px !important;
+    height: 24px !important;
+    line-height: 1 !important;
+    transition: all 0.15s ease !important;
+}
+section[data-testid="stSidebar"] .stButton > button:hover {
+    background: #2563eb !important;
+    border-color: #2563eb !important;
+    color: #fff !important;
+}
+section[data-testid="stSidebar"] .stButton > button[kind="primary"] {
+    background: #2563eb !important;
+    border-color: #1d4ed8 !important;
+    color: #fff !important;
+    font-weight: 700 !important;
+}
+section[data-testid="stSidebar"] [data-testid="stDownloadButton"] button {
+    background: #065f46 !important;
+    border-color: #047857 !important;
+    color: #fff !important;
+    border-radius: 8px !important;
+    font-weight: 600 !important;
+    height: auto !important;
+    min-height: 36px !important;
+    padding: 6px 12px !important;
+    font-size: 0.78rem !important;
+}
+
+/* ── Sidebar labels ──────────────────────────────────────── */
 .topic-label {
-    font-size: 0.78rem;
-    font-weight: 600;
-    color: #555;
-    margin: 6px 0 2px 0;
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: #64748b !important;
+    margin: 10px 0 3px 0;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+.sidebar-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #f1f5f9 !important;
     letter-spacing: 0.02em;
 }
-/* ── Question panel card ── */
-.question-card {
-    background: #ffffff;
-    border: 1px solid #e0e4ea;
-    border-radius: 10px;
-    padding: 20px 24px;
+.sidebar-sub {
+    font-size: 0.72rem;
+    color: #64748b !important;
+    margin-top: 2px;
 }
-/* ── Answer panel card ── */
-.answer-card {
-    background: #f6f9ff;
-    border: 1px solid #c8d8f0;
-    border-left: 4px solid #2563eb;
-    border-radius: 10px;
-    padding: 18px 22px;
-    height: 100%;
+.progress-text {
+    font-size: 0.72rem;
+    color: #94a3b8 !important;
+    text-align: right;
 }
-/* ── Answer card header ── */
-.answer-header {
-    font-size: 0.9rem;
+
+/* ── Tabs ─────────────────────────────────────────────────── */
+.stTabs [data-baseweb="tab-list"] {
+    gap: 0;
+    background: #f8fafc;
+    border-radius: 10px 10px 0 0;
+    border-bottom: 2px solid #e2e8f0;
+    padding: 0 4px;
+}
+.stTabs [data-baseweb="tab"] {
+    height: 44px;
+    padding: 0 24px;
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: #64748b;
+    border-radius: 8px 8px 0 0;
+    border: none;
+    background: transparent;
+}
+.stTabs [aria-selected="true"] {
+    color: #2563eb !important;
+    background: #fff !important;
+    border-bottom: 2px solid #2563eb !important;
+}
+
+/* ── Question header ─────────────────────────────────────── */
+.q-header-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 4px;
+}
+.q-num-badge {
+    background: #2563eb;
+    color: white;
+    font-size: 0.78rem;
     font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 20px;
+    white-space: nowrap;
+}
+.topic-chip {
+    background: #eff6ff;
     color: #2563eb;
-    margin-bottom: 10px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 20px;
+    border: 1px solid #bfdbfe;
+}
+.q-title {
+    font-size: 1.45rem;
+    font-weight: 700;
+    color: #0f172a;
+    line-height: 1.3;
+    margin: 6px 0 14px 0;
+}
+
+/* ── Cards ────────────────────────────────────────────────── */
+.card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 20px 24px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+}
+.answer-card-header {
+    background: linear-gradient(135deg, #1e40af 0%, #2563eb 100%);
+    color: white;
+    border-radius: 10px 10px 0 0;
+    padding: 10px 18px;
+    font-size: 0.85rem;
+    font-weight: 700;
     letter-spacing: 0.03em;
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
-/* ── Progress badge ── */
-.q-badge {
+.answer-card-body {
+    background: #f8faff;
+    border: 1px solid #c7d9f8;
+    border-top: none;
+    border-radius: 0 0 10px 10px;
+    padding: 18px 20px;
+    min-height: 180px;
+}
+.answer-placeholder {
+    text-align: center;
+    padding: 48px 20px;
+    color: #94a3b8;
+    font-size: 0.9rem;
+}
+.answer-placeholder .icon { font-size: 2rem; margin-bottom: 8px; }
+
+/* ── Input section ───────────────────────────────────────── */
+.input-section-label {
     font-size: 0.8rem;
-    color: #888;
-    margin-left: 6px;
+    font-weight: 700;
+    color: #475569;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 8px;
+    padding-top: 4px;
 }
-/* ── Remove excess top padding on main block ── */
-.block-container { padding-top: 1.5rem !important; }
-/* ── Divider color ── */
-hr { border-color: #e0e4ea !important; }
+
+/* ── Divider ─────────────────────────────────────────────── */
+hr { border-color: #e2e8f0 !important; margin: 12px 0 !important; }
+
+/* ── Streamlit button overrides (main area) ─────────────── */
+.stButton > button {
+    border-radius: 8px !important;
+    font-weight: 600 !important;
+    font-size: 0.88rem !important;
+    transition: all 0.15s ease !important;
+}
+.stButton > button[kind="primary"] {
+    background: #2563eb !important;
+    border: none !important;
+}
+.stButton > button[kind="primary"]:hover {
+    background: #1d4ed8 !important;
+    box-shadow: 0 4px 12px rgba(37,99,235,0.35) !important;
+}
+
+/* ── Text input ──────────────────────────────────────────── */
+.stTextInput > div > div > input {
+    border-radius: 8px !important;
+    border: 1.5px solid #e2e8f0 !important;
+    font-size: 0.92rem !important;
+}
+.stTextInput > div > div > input:focus {
+    border-color: #2563eb !important;
+    box-shadow: 0 0 0 3px rgba(37,99,235,0.15) !important;
+}
+
+/* ── Success/Error ───────────────────────────────────────── */
+.stSuccess, .stError {
+    border-radius: 8px !important;
+    font-size: 0.88rem !important;
+}
+
+/* ── Caption / footer ───────────────────────────────────── */
+.app-footer {
+    text-align: center;
+    color: #94a3b8;
+    font-size: 0.72rem;
+    padding: 16px 0 4px;
+    border-top: 1px solid #f1f5f9;
+    margin-top: 24px;
+}
 </style>
 """, unsafe_allow_html=True)
 
-# ── Question bank ─────────────────────────────────────────────────────────────
+# ═══════════════════════════════════════════════════════════════════════════════
+# QUESTION BANK
+# ═══════════════════════════════════════════════════════════════════════════════
 raw_questions = r"""เชือกเส้นหนึ่งสั่นด้วยความถี่ค่าหนึ่ง ทำให้เกิดคลื่นต่อเนื่องเคลื่อนที่ไปทางขวาดังรูปที่ (1) เป็นภาพถ่ายการสั่นของเส้นเชือกในช่วงหนึ่งและในขณะที่คลื่นเคลื่อนที่ไป อนุภาคของเส้นเชือก การเคลื่อนที่ ขึ้น - ลง ซึ่งเมื่อเขียนกราฟแสดงความสัมพันธ์ระหว่างการกระจัดกับเวลาจะได้ดัง รูปที่ (2) จงหาอัตราเร็วของคลื่นบนเส้นเชือก
 ในการสั่นเชือกที่มีความยาวมากเส้นหนึ่ง ปรากฏว่าหลังจากการสั่น 0.5 วินาที ได้คลื่นดังรูป จงหาอัตราเร็วของคลื่นบนเชือกเส้นนี้
 เชือกที่ยาวมาก และสม่ำเสมอเส้นหนึ่งถูกขึงตึง ถ้าเราสะบัดปลายเชือกอีกข้างหนึ่ง ขึ้นลงอย่างสม่ำเสมอ เป็นเวลา 0.5 วินาที รูปร่างของเส้นเชือกจะเปลี่ยนแปลงดังรูป จงหา (ก) ความยาวคลื่น (ข) อัตราเร็วของคลื่น (ค) ความถี่ของคลื่น (ง) ความถี่ที่สะบัดปลายเชือก
@@ -141,15 +327,15 @@ questions = [q.strip() for q in raw_questions.strip().split("\n") if q.strip()]
 
 # ── Topic groups ──────────────────────────────────────────────────────────────
 TOPICS = [
-    ("🌊 สมบัติพื้นฐาน",    list(range(1,  13))),
-    ("📦 คลื่นดล",           list(range(13, 15))),
-    ("🔁 SHM",               list(range(15, 17))),
-    ("📐 เฟส",               list(range(17, 28))),
-    ("➕ การซ้อนทับ",        list(range(28, 32))),
-    ("↗️ การหักเห",          list(range(32, 43))),
-    ("🌀 การแทรกสอด",        list(range(43, 53))),
+    ("🌊 สมบัติพื้นฐาน",     list(range(1,  13))),
+    ("📦 คลื่นดล",            list(range(13, 15))),
+    ("🔁 SHM",                list(range(15, 17))),
+    ("📐 เฟส",                list(range(17, 28))),
+    ("➕ การซ้อนทับ",         list(range(28, 32))),
+    ("↗️ การหักเห",           list(range(32, 43))),
+    ("🌀 การแทรกสอด",         list(range(43, 53))),
     ("🎵 คลื่นนิ่ง/สั่นพ้อง", list(range(53, 63))),
-    ("🔬 การเลี้ยวเบน",      list(range(63, 69))),
+    ("🔬 การเลี้ยวเบน",       list(range(63, 69))),
 ]
 
 # ── Session state ─────────────────────────────────────────────────────────────
@@ -166,7 +352,7 @@ def _select(q: int):
 def _badge(q: int) -> str:
     if q not in st.session_state.results: return ""
     res = st.session_state.results[q]
-    return " ✅" if all(res) else (" ⚠" if any(res) else " ✗")
+    return " ✅" if all(res) else (" ⚠️" if any(res) else " ✗")
 
 
 def _fmt(expected: float, tol: float, unit: str) -> str:
@@ -174,15 +360,44 @@ def _fmt(expected: float, tol: float, unit: str) -> str:
     return f"{int(round(expected))}{u}" if tol == 0 else f"{expected:.4g}{u}"
 
 
-# ── Sidebar ───────────────────────────────────────────────────────────────────
-with st.sidebar:
-    st.markdown("### 🌊 คลื่นกล — เลือกข้อ")
-    st.caption(f"ข้อที่กำลังดู: **{st.session_state.selected_q}**")
+def _progress() -> tuple[int, int]:
+    done = sum(1 for q, r in st.session_state.results.items() if r and all(r))
+    return done, len(questions)
 
-    # ── PDF download ──────────────────────────────────────────────────────
-    if st.button("📄 สร้าง PDF โจทย์ทั้งหมด",
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# SIDEBAR
+# ═══════════════════════════════════════════════════════════════════════════════
+with st.sidebar:
+    # ── App title ──────────────────────────────────────────────────────────
+    st.markdown("""
+    <div style="padding: 16px 4px 8px;">
+        <div class="sidebar-title">🌊 คลื่นกล — ม.5</div>
+        <div class="sidebar-sub">Physics Exercise Platform</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # ── Progress bar ───────────────────────────────────────────────────────
+    done, total = _progress()
+    pct = done / total
+    st.markdown(f"""
+    <div style="margin: 0 0 4px 0;">
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+            <span style="font-size:0.68rem;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;">ความก้าวหน้า</span>
+            <span style="font-size:0.68rem;color:#94a3b8;">{done}/{total} ข้อ</span>
+        </div>
+        <div style="background:#1e293b;border-radius:4px;height:5px;overflow:hidden;">
+            <div style="background:linear-gradient(90deg,#2563eb,#38bdf8);width:{pct*100:.0f}%;height:100%;border-radius:4px;transition:width 0.3s;"></div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
+
+    # ── Export button ──────────────────────────────────────────────────────
+    if st.button("📄 สร้างไฟล์โจทย์ทั้งหมด",
                  use_container_width=True, key="gen_pdf_btn"):
-        with st.spinner("กำลังสร้าง PDF... (อาจใช้เวลา 20–40 วินาที)"):
+        with st.spinner("กำลังสร้างไฟล์..."):
             from pdf_export import generate_problems_pdf
             st.session_state["_pdf_bytes"] = generate_problems_pdf(
                 questions, get_plot_for_question
@@ -190,7 +405,7 @@ with st.sidebar:
 
     if "_pdf_bytes" in st.session_state:
         st.download_button(
-            "⬇ ดาวน์โหลด (เปิดใน browser → Ctrl+P)",
+            "⬇ ดาวน์โหลด HTML → เปิด → Ctrl+P",
             data=st.session_state["_pdf_bytes"],
             file_name="physics_problems.html",
             mime="text/html",
@@ -198,26 +413,39 @@ with st.sidebar:
             key="dl_pdf_btn",
             type="primary",
         )
-    # ─────────────────────────────────────────────────────────────────────
-    st.divider()
 
+    st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
+    st.markdown("<hr style='border-color:#1e293b;margin:8px 0;'>", unsafe_allow_html=True)
+
+    # ── Question navigation ────────────────────────────────────────────────
     for topic_name, q_nums in TOPICS:
-        st.markdown(f'<p class="topic-label">{topic_name}</p>', unsafe_allow_html=True)
-        # 6 buttons per row for compact display
+        st.markdown(
+            f'<p class="topic-label">{topic_name}</p>',
+            unsafe_allow_html=True,
+        )
         for row_start in range(0, len(q_nums), 6):
-            row = q_nums[row_start: row_start + 6]
+            row  = q_nums[row_start: row_start + 6]
             cols = st.columns(len(row))
             for col, qn in zip(cols, row):
                 is_active = st.session_state.selected_q == qn
-                label = f"{qn}{_badge(qn)}"
+                label     = f"{qn}{_badge(qn)}"
                 if col.button(label, key=f"nav_{qn}",
                               type="primary" if is_active else "secondary",
                               use_container_width=True):
                     _select(qn)
                     st.rerun()
 
-# ── Tabs ──────────────────────────────────────────────────────────────────────
-tab_exercise, tab_summary = st.tabs(["📚 แบบฝึกหัด", "📖 สรุปการแทรกสอด"])
+    st.markdown("""
+    <div style="padding:16px 0 4px;text-align:center;font-size:0.65rem;color:#334155;">
+        ฟิสิกส์ ม.5 · Streamlit
+    </div>
+    """, unsafe_allow_html=True)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# MAIN TABS
+# ═══════════════════════════════════════════════════════════════════════════════
+tab_exercise, tab_summary = st.tabs(["📚  แบบฝึกหัด", "📖  สรุปทฤษฎีการแทรกสอด"])
 
 with tab_summary:
     render_summary()
@@ -227,45 +455,57 @@ with tab_exercise:
     q_text   = questions[i - 1]
     key_data = ANSWER_KEYS.get(i)
     answer   = ANSWERS.get(i)
+    topic_of_q = next((t for t, qs in TOPICS if i in qs), "")
+    badge_str  = _badge(i)
 
-    # ── Top bar: title + prev/next ────────────────────────────────────────────
-    h_left, h_right = st.columns([7, 1])
-    with h_left:
-        badge_str = _badge(i)
-        topic_of_q = next((t for t, qs in TOPICS if i in qs), "")
-        st.markdown(
-            f"<span style='font-size:0.78rem;color:#888;'>{topic_of_q}</span>",
-            unsafe_allow_html=True,
-        )
-        st.markdown(f"## ข้อที่ {i}{badge_str}")
-    with h_right:
-        st.markdown("<div style='margin-top:28px'></div>", unsafe_allow_html=True)
-        ca, cb = st.columns(2)
-        if ca.button("◀", disabled=(i <= 1), use_container_width=True):
+    # ── Question header ───────────────────────────────────────────────────
+    col_title, col_nav = st.columns([8, 1], gap="small")
+
+    with col_title:
+        st.markdown(f"""
+        <div class="q-header-bar">
+            <span class="q-num-badge">ข้อที่ {i}</span>
+            <span class="topic-chip">{topic_of_q}</span>
+            {'<span style="font-size:1.1rem;">'+badge_str.strip()+'</span>' if badge_str.strip() else ''}
+        </div>
+        """, unsafe_allow_html=True)
+
+    with col_nav:
+        st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
+        n1, n2 = st.columns(2)
+        if n1.button("◀", disabled=(i <= 1), use_container_width=True, key="prev"):
             _select(i - 1); st.rerun()
-        if cb.button("▶", disabled=(i >= len(questions)), use_container_width=True):
+        if n2.button("▶", disabled=(i >= len(questions)), use_container_width=True, key="next"):
             _select(i + 1); st.rerun()
 
-    st.markdown("<hr style='margin:4px 0 16px 0'>", unsafe_allow_html=True)
+    st.markdown("<hr style='margin:10px 0 18px'>", unsafe_allow_html=True)
 
-    # ── Split: question left, answer right ───────────────────────────────────
+    # ── Two-column layout ─────────────────────────────────────────────────
     left, right = st.columns([11, 9], gap="large")
 
+    # ── LEFT: Question + input ────────────────────────────────────────────
     with left:
-        st.markdown(q_text)
+        # Question text in a card
+        st.markdown(f"""
+        <div class="card" style="margin-bottom:16px;line-height:1.9;font-size:1.0rem;">
+            {q_text}
+        </div>
+        """, unsafe_allow_html=True)
 
         fig = get_plot_for_question(i)
         if fig:
             st.pyplot(fig, use_container_width=True)
 
-        st.markdown("<hr style='margin:12px 0'>", unsafe_allow_html=True)
+        # Answer input section
+        st.markdown("<div class='input-section-label'>✏️ กรอกคำตอบ</div>",
+                    unsafe_allow_html=True)
 
         if key_data is None:
-            st.info("📝 ข้อนี้ตรวจโดยดูจากเฉลย")
-            st.text_area("บันทึกคำตอบ", key=f"note_{i}", height=80,
-                         label_visibility="collapsed")
+            st.info("📝 ข้อนี้ตรวจโดยดูจากเฉลยละเอียด")
+            st.text_area("บันทึกคำตอบ / แนวคิด", key=f"note_{i}", height=80,
+                         label_visibility="collapsed",
+                         placeholder="จดแนวคิดหรือคำตอบของคุณที่นี่...")
         else:
-            st.markdown("**✏️ กรอกคำตอบ**")
             n = len(key_data)
             cols = st.columns(min(n, 2))
             for j, (label, exp, unit, tol) in enumerate(key_data):
@@ -277,7 +517,8 @@ with tab_exercise:
                         placeholder=f"เช่น {_fmt(exp, tol, '')}",
                     )
 
-            if st.button("✅ ตรวจคำตอบ", key=f"btn_{i}", type="primary", use_container_width=True):
+            if st.button("✅ ตรวจคำตอบ", key=f"btn_{i}",
+                         type="primary", use_container_width=True):
                 res = [
                     check_answer(st.session_state.get(f"ans_{i}_{j}", ""), exp, tol)
                     for j, (_, exp, _, tol) in enumerate(key_data)
@@ -285,45 +526,31 @@ with tab_exercise:
                 st.session_state.results[i] = res
 
             if i in st.session_state.results:
-                res = st.session_state.results[i]
-                st.markdown("<div style='margin-top:8px'></div>", unsafe_allow_html=True)
-                for is_ok, (label, exp, unit, tol) in zip(res, key_data):
+                st.markdown("<div style='margin-top:10px'></div>", unsafe_allow_html=True)
+                for is_ok, (label, exp, unit, tol) in zip(
+                        st.session_state.results[i], key_data):
                     ans_str = _fmt(exp, tol, unit)
                     if is_ok:
-                        st.success(f"✓ {label}: ถูกต้อง!")
+                        st.success(f"✓  {label} — ถูกต้อง!")
                     else:
-                        st.error(f"✗ {label}: ยังไม่ถูก — เฉลย: **{ans_str}**")
+                        st.error(f"✗  {label} — ยังไม่ถูก  |  เฉลย: **{ans_str}**")
 
+    # ── RIGHT: Answer panel ───────────────────────────────────────────────
     with right:
-        st.markdown(
-            """
-            <div style="
-                background:#2563eb;
-                color:white;
-                border-radius:8px 8px 0 0;
-                padding:8px 16px;
-                font-size:0.85rem;
-                font-weight:700;
-                letter-spacing:0.04em;
-            ">📖 เฉลยละเอียด</div>
-            <div style="
-                background:#f6f9ff;
-                border:1px solid #c8d8f0;
-                border-top:none;
-                border-radius:0 0 8px 8px;
-                padding:16px 18px;
-                min-height:200px;
-            ">
-            """,
-            unsafe_allow_html=True,
-        )
+        st.markdown("""
+        <div class="answer-card-header">
+            📖 &nbsp;เฉลยละเอียด
+        </div>
+        <div class="answer-card-body">
+        """, unsafe_allow_html=True)
 
         if not st.session_state.show_ans:
-            st.markdown(
-                "<div style='text-align:center;padding:40px 0;color:#aaa;font-size:0.9rem;'>"
-                "กดปุ่มด้านล่างเพื่อดูเฉลย</div>",
-                unsafe_allow_html=True,
-            )
+            st.markdown("""
+            <div class="answer-placeholder">
+                <div class="icon">🔒</div>
+                กดปุ่มด้านล่างเพื่อเปิดเฉลย
+            </div>
+            """, unsafe_allow_html=True)
         else:
             if answer:
                 st.markdown(answer)
@@ -332,9 +559,8 @@ with tab_exercise:
 
         st.markdown("</div>", unsafe_allow_html=True)
 
-        btn_label = "🙈 ซ่อนเฉลย" if st.session_state.show_ans else "👁 แสดงเฉลย"
+        btn_label = "🙈  ซ่อนเฉลย" if st.session_state.show_ans else "👁  แสดงเฉลย"
+        st.markdown("<div style='margin-top:8px'></div>", unsafe_allow_html=True)
         if st.button(btn_label, key="toggle_ans", use_container_width=True):
             st.session_state.show_ans = not st.session_state.show_ans
             st.rerun()
-
-st.caption("พัฒนาโดยใช้ Streamlit 🎈")
