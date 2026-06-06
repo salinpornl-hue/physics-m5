@@ -1,15 +1,61 @@
 import streamlit as st
 from visuals import get_plot_for_question
 from answers import ANSWERS
+from answer_keys import ANSWER_KEYS, check_answer
 
-# ตั้งค่าหน้าเว็บ
-st.set_page_config(page_title="แบบฝึกหัดฟิสิกส์: คลื่นกล", page_icon="🌊", layout="centered")
+st.set_page_config(
+    page_title="แบบฝึกหัดฟิสิกส์: คลื่นกล",
+    page_icon="🌊",
+    layout="wide",
+)
 
+# ── Session state ─────────────────────────────────────────────────────────────
+if "results" not in st.session_state:
+    st.session_state.results = {}   # {q_num: [True/False, ...]}
+
+# ── Score summary ─────────────────────────────────────────────────────────────
+auto_qs = [q for q, v in ANSWER_KEYS.items() if v is not None]
+total_parts = sum(len(ANSWER_KEYS[q]) for q in auto_qs)
+correct_parts = sum(sum(v) for v in st.session_state.results.values())
+answered_parts = sum(len(v) for v in st.session_state.results.values())
+
+# ── Sidebar ───────────────────────────────────────────────────────────────────
+with st.sidebar:
+    st.title("📊 คะแนนรวม")
+    st.metric("ตอบถูก (ส่วน)", f"{correct_parts} / {total_parts}")
+    st.progress(correct_parts / total_parts if total_parts else 0)
+
+    if answered_parts > 0:
+        accuracy = correct_parts / answered_parts * 100
+        st.metric("ความแม่นยำ", f"{accuracy:.1f}%")
+
+    st.metric("ข้อที่ตรวจแล้ว", f"{len(st.session_state.results)} / {len(auto_qs)}")
+
+    if st.button("🔄 รีเซ็ตคะแนนทั้งหมด"):
+        st.session_state.results = {}
+        st.rerun()
+
+    st.divider()
+
+    if st.session_state.results:
+        st.subheader("ผลรายข้อ")
+        for q_num in sorted(st.session_state.results.keys()):
+            res = st.session_state.results[q_num]
+            n_ok = sum(res)
+            n_tot = len(res)
+            if n_ok == n_tot:
+                st.success(f"ข้อ {q_num}: {n_ok}/{n_tot} ✓")
+            elif n_ok > 0:
+                st.warning(f"ข้อ {q_num}: {n_ok}/{n_tot} ⚠")
+            else:
+                st.error(f"ข้อ {q_num}: {n_ok}/{n_tot} ✗")
+
+# ── Header ────────────────────────────────────────────────────────────────────
 st.title("🌊 คลังโจทย์แบบฝึกหัดฟิสิกส์ บทที่ 9: คลื่นกล")
 st.markdown("รวบรวมโจทย์ปัญหาจากเอกสารรายวิชา PHYSICS 3 เรื่อง คลื่นกล เพื่อใช้ในการฝึกฝนและทบทวนความรู้")
 st.divider()
 
-# รวมโจทย์ทั้งหมดโดยใช้ Raw String (r"") เพื่อให้รองรับสัญลักษณ์ทางคณิตศาสตร์ LaTeX ได้สมบูรณ์
+# ── Questions ─────────────────────────────────────────────────────────────────
 raw_questions = r"""เชือกเส้นหนึ่งสั่นด้วยความถี่ค่าหนึ่ง ทำให้เกิดคลื่นต่อเนื่องเคลื่อนที่ไปทางขวาดังรูปที่ (1) เป็นภาพถ่ายการสั่นของเส้นเชือกในช่วงหนึ่งและในขณะที่คลื่นเคลื่อนที่ไป อนุภาคของเส้นเชือก การเคลื่อนที่ ขึ้น - ลง ซึ่งเมื่อเขียนกราฟแสดงความสัมพันธ์ระหว่างการกระจัดกับเวลาจะได้ดัง รูปที่ (2) จงหาอัตราเร็วของคลื่นบนเส้นเชือก
 ในการสั่นเชือกที่มีความยาวมากเส้นหนึ่ง ปรากฏว่าหลังจากการสั่น 0.5 วินาที ได้คลื่นดังรูป จงหาอัตราเร็วของคลื่นบนเชือกเส้นนี้
 เชือกที่ยาวมาก และสม่ำเสมอเส้นหนึ่งถูกขึงตึง ถ้าเราสะบัดปลายเชือกอีกข้างหนึ่ง ขึ้นลงอย่างสม่ำเสมอ เป็นเวลา 0.5 วินาที รูปร่างของเส้นเชือกจะเปลี่ยนแปลงดังรูป จงหา (ก) ความยาวคลื่น (ข) อัตราเร็วของคลื่น (ค) ความถี่ของคลื่น (ง) ความถี่ที่สะบัดปลายเชือก
@@ -80,19 +126,65 @@ $S_1$ และ $S_2$ เป็นแหล่งกำเนิดอาพั�
 ช่องแคบคู่อยู่ห่างกัน 8 เซนติเมตร ในถาดคลื่น ถ้าทำให้เกิดคลื่นหน้าตรงผ่านช่องแคบคู่นั้นในแนวตั้งฉาก ทำให้เกิดการแทรกสอดขึ้น ถ้าจุด A อยู่บนแนวปฏิบัพที่ 2 ซึ่งอยู่ห่างจากช่องแคบทั้งสองเป็นระยะ 10 เซนติเมตร และ 14 เซนติเมตร ตามลำดับ จงหา ก. ความยาวคลื่นน้ำ ข. แนวบัพและปฏิบัพที่เกิดขึ้นทั้งหมด
 """
 
-# แยกโจทย์แต่ละข้อด้วยการตัดบรรทัด (Enter)
-questions = [q.strip() for q in raw_questions.strip().split('\n') if q.strip()]
+questions = [q.strip() for q in raw_questions.strip().split("\n") if q.strip()]
 
-# วนลูปแสดงโจทย์
+
+def _fmt_expected(expected: float, tol: float, unit: str) -> str:
+    u = f" {unit}" if unit else ""
+    if tol == 0:
+        return f"{int(round(expected))}{u}"
+    if abs(expected) < 0.01 or abs(expected) >= 10000:
+        return f"{expected:.4g}{u}"
+    return f"{expected:.4g}{u}"
+
+
 for i, q in enumerate(questions, start=1):
-    st.markdown(f"**ข้อที่ {i}.** {q}")
+    # Status badge
+    badge = ""
+    if i in st.session_state.results:
+        res = st.session_state.results[i]
+        badge = " ✅" if all(res) else (" ⚠️" if any(res) else " ❌")
 
-    # ดึงรูปจากไฟล์ visuals.py
+    st.markdown(f"### ข้อที่ {i}{badge}")
+    st.markdown(q)
+
     fig = get_plot_for_question(i)
     if fig:
-        st.pyplot(fig)
+        st.pyplot(fig, use_container_width=True)
 
-    st.text_input(f"คำตอบข้อ {i}", key=f"ans_{i}")
+    key_data = ANSWER_KEYS.get(i)
+
+    if key_data is None:
+        st.info("📝 ข้อนี้ตรวจโดยดูจากเฉลย (วาดรูป / อธิบาย)")
+        st.text_area("บันทึกคำตอบของคุณ", key=f"note_{i}", height=70, label_visibility="collapsed")
+    else:
+        n_parts = len(key_data)
+        cols = st.columns(min(n_parts, 3))
+        for j, (label, expected, unit, tol) in enumerate(key_data):
+            hint = f"เช่น {_fmt_expected(expected, tol, '')}"
+            unit_label = f" ({unit})" if unit else ""
+            with cols[j % min(n_parts, 3)]:
+                st.text_input(f"{label}{unit_label}", key=f"ans_{i}_{j}", placeholder=hint)
+
+        if st.button(f"✅ ตรวจคำตอบข้อ {i}", key=f"btn_{i}", use_container_width=False):
+            res = [
+                check_answer(
+                    st.session_state.get(f"ans_{i}_{j}", ""),
+                    expected,
+                    tol,
+                )
+                for j, (_, expected, _, tol) in enumerate(key_data)
+            ]
+            st.session_state.results[i] = res
+
+        if i in st.session_state.results:
+            res = st.session_state.results[i]
+            for is_ok, (label, expected, unit, tol) in zip(res, key_data):
+                ans_str = _fmt_expected(expected, tol, unit)
+                if is_ok:
+                    st.success(f"✓ {label}: ถูกต้อง!")
+                else:
+                    st.error(f"✗ {label}: ยังไม่ถูก — เฉลย: **{ans_str}**")
 
     with st.expander("📖 ดูเฉลยละเอียด"):
         answer = ANSWERS.get(i)
