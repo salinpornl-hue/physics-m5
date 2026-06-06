@@ -3,7 +3,6 @@ from visuals import get_plot_for_question
 from answers import ANSWERS
 from answer_keys import ANSWER_KEYS, check_answer
 from summary import render_summary
-from pdf_export import generate_problems_pdf
 
 st.set_page_config(
     page_title="ฟิสิกส์: คลื่นกล",
@@ -179,6 +178,27 @@ def _fmt(expected: float, tol: float, unit: str) -> str:
 with st.sidebar:
     st.markdown("### 🌊 คลื่นกล — เลือกข้อ")
     st.caption(f"ข้อที่กำลังดู: **{st.session_state.selected_q}**")
+
+    # ── PDF download ──────────────────────────────────────────────────────
+    if st.button("📄 สร้าง PDF โจทย์ทั้งหมด",
+                 use_container_width=True, key="gen_pdf_btn"):
+        with st.spinner("กำลังสร้าง PDF... (อาจใช้เวลา 20–40 วินาที)"):
+            from pdf_export import generate_problems_pdf
+            st.session_state["_pdf_bytes"] = generate_problems_pdf(
+                questions, get_plot_for_question
+            )
+
+    if "_pdf_bytes" in st.session_state:
+        st.download_button(
+            "⬇ ดาวน์โหลด PDF",
+            data=st.session_state["_pdf_bytes"],
+            file_name="physics_problems.pdf",
+            mime="application/pdf",
+            use_container_width=True,
+            key="dl_pdf_btn",
+            type="primary",
+        )
+    # ─────────────────────────────────────────────────────────────────────
     st.divider()
 
     for topic_name, q_nums in TOPICS:
