@@ -1,4 +1,5 @@
 import streamlit as st
+from visuals import get_plot_for_question
 
 # ตั้งค่าหน้าเว็บ
 st.set_page_config(page_title="แบบฝึกหัดฟิสิกส์: คลื่นกล", page_icon="🌊", layout="centered")
@@ -85,13 +86,15 @@ questions = [q.strip() for q in raw_questions.strip().split('\n') if q.strip()]
 for i, q in enumerate(questions, start=1):
     st.markdown(f"**ข้อที่ {i}.** {q}")
     
-    # กล่องใส่คำตอบสำหรับแต่ละข้อ
-    st.text_input(f"คำตอบข้อ {i}", key=f"ans_{i}")
+    # ดึงรูปจากไฟล์ visuals.py
+    fig = get_plot_for_question(i)
+    if fig:
+        st.pyplot(fig)
     
-    # เพิ่มส่วนสำหรับแสดงเฉลยแบบซ่อนได้ (สามารถนำไปเติมข้อมูลเฉลยทีหลังได้)
+    st.text_input(f"คำตอบข้อ {i}", key=f"ans_{i}")
     with st.expander("ดูเฉลย"):
-        st.write("เฉลยสำหรับข้อนี้ (กำลังอัปเดต...)")
-        
+        st.write("เฉลยสำหรับข้อนี้...")
+    st.divider()
     st.divider()
 
 st.caption("พัฒนาโดยใช้ Streamlit 🎈")
