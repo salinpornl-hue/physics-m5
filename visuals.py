@@ -6,27 +6,29 @@ def get_plot_for_question(q_index):
     
     # Question 1: Wave graphs (y-x and y-t)
     if q_index == 1:
-        fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(6, 7))
+        fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(6, 8))
         
-        # รูปที่ 1: กราฟ y-x (ความยาวคลื่น lambda = 0.2 m)
-        x = np.linspace(0, 0.2, 100)
-        y1 = 0.1 * np.sin(2 * np.pi * x / 0.2)
-        ax1.plot(x, y1, color='blue', linewidth=2)
-        ax1.set_title("Figure (1): Displacement vs Position (y-x)")
+        # กราฟ (1) y-x: ความยาวคลื่น 0.2 m (1 ลูกคลื่น)
+        x = np.linspace(0, 0.2, 200)
+        y1 = 0.5 * np.sin(2 * np.pi * x / 0.2)
+        ax1.plot(x, y1, color='blue', linewidth=2.5)
+        ax1.set_title("Figure (1): Wave profile at a specific time")
         ax1.set_xlabel("Position (m)")
         ax1.set_ylabel("Displacement (cm)")
-        ax1.set_xticks([0, 0.1, 0.2])
-        ax1.grid(True)
+        ax1.set_xticks([0, 0.05, 0.1, 0.15, 0.2]) # ตรงกับสเกลโจทย์
+        ax1.axhline(0, color='black', linewidth=1)
+        ax1.grid(True, linestyle='--')
         
-        # รูปที่ 2: กราฟ y-t (คาบ T = 0.1 s)
-        t = np.linspace(0, 0.1, 100)
-        y2 = 0.1 * np.sin(2 * np.pi * t / 0.1)
-        ax2.plot(t, y2, color='red', linewidth=2)
-        ax2.set_title("Figure (2): Displacement vs Time (y-t)")
+        # กราฟ (2) y-t: คาบ 0.1 s (1 ลูกคลื่น)
+        t = np.linspace(0, 0.1, 200)
+        y2 = 0.5 * np.sin(2 * np.pi * t / 0.1)
+        ax2.plot(t, y2, color='red', linewidth=2.5)
+        ax2.set_title("Figure (2): Displacement vs Time at a specific position")
         ax2.set_xlabel("Time (s)")
         ax2.set_ylabel("Displacement (cm)")
-        ax2.set_xticks([0, 0.05, 0.1])
-        ax2.grid(True)
+        ax2.set_xticks([0, 0.025, 0.05, 0.075, 0.1]) # ตรงกับสเกลโจทย์
+        ax2.axhline(0, color='black', linewidth=1)
+        ax2.grid(True, linestyle='--')
         
         plt.tight_layout()
         return fig
