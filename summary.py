@@ -938,7 +938,286 @@ def _fig_barrier():
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-#  FIGURE 9 — 3-step flowchart
+#  FIGURE 9 — Linked: ring pattern + wave superposition at A / N points
+# ═══════════════════════════════════════════════════════════════════════════════
+def _draw_wave_cos(ax, src, dst, lam, color,
+                   amp=0.23, lw=2.4, zorder=5, alpha=1.0):
+    """Cosine wave along src→dst: starts at CREST (+amp) at the source."""
+    vec  = np.asarray(dst) - np.asarray(src)
+    dist = np.linalg.norm(vec)
+    uhat = vec / dist
+    nhat = np.array([-uhat[1], uhat[0]])
+    t    = np.linspace(0.0, dist, 600)
+    osc  = amp * np.cos(2 * np.pi * t / lam)
+    pts  = (np.asarray(src)
+            + np.outer(t, uhat)
+            + np.outer(osc, nhat))
+    ax.plot(pts[:, 0], pts[:, 1], color=color, lw=lw, alpha=alpha,
+            solid_capstyle='round', zorder=zorder)
+
+
+def _fig_interference_linked():
+    """
+    Composite figure linking the interference pattern to wave superposition.
+    Left: top-view ring diagram with A₁ and N₁ lines + two example points.
+    Right: 3-row wave panels (W1 / W2 / Resultant) for each point.
+    """
+    with plt.rc_context(RC):
+        fig = plt.figure(figsize=(14, 8.0))
+        outer = GridSpec(1, 2, figure=fig,
+                         width_ratios=[1.55, 1],
+                         wspace=0.28,
+                         left=0.03, right=0.98,
+                         top=0.91, bottom=0.05)
+
+        ax_map = fig.add_subplot(outer[0])
+
+        # right side: 2 × 3 sub-grid (2 points × 3 wave rows each)
+        inner = outer[1].subgridspec(2, 1, hspace=0.55)
+        gA    = inner[0].subgridspec(3, 1, hspace=0.05)
+        gN    = inner[1].subgridspec(3, 1, hspace=0.05)
+        axA   = [fig.add_subplot(gA[i]) for i in range(3)]  # antinode rows
+        axN   = [fig.add_subplot(gN[i]) for i in range(3)]  # node rows
+
+        # ── parameters ──────────────────────────────────────────────────────
+        d   = 6.0
+        lam = 2.0
+        s1  = np.array([0.0,  d / 2])   # S₁ at top
+        s2  = np.array([0.0, -d / 2])   # S₂ at bottom
+        n_max = int(d / lam)            # = 3
+
+        # Exact geometry (derived analytically):
+        # P on A₁: r₁=6=3λ, r₂=8=4λ, Δr=2=λ  → Antinode A₁
+        P_A  = np.array([np.sqrt(320.0 / 9.0), 7.0 / 3.0])
+        r1_A, r2_A = 6.0, 8.0
+
+        # Q on N₁: r₁=7=3.5λ, r₂=8=4λ, Δr=1=λ/2 → Node N₁
+        P_N  = np.array([np.sqrt(735.0 / 16.0), 1.25])
+        r1_N, r2_N = 7.0, 8.0
+
+        # ── MAP PANEL ────────────────────────────────────────────────────────
+        ax_map.set_facecolor('#f0f6ff')
+        ax_map.set_aspect('equal')
+        ax_map.spines[['top', 'right']].set_visible(False)
+
+        # Faint wavefront rings
+        for src, col in [(s1, CB), (s2, CR)]:
+            for n in range(1, 7):
+                r     = n * lam
+                alpha = max(0.06, 0.48 - n * 0.06)
+                c     = plt.Circle(src, r, color=col, fill=False,
+                                   lw=1.2, alpha=alpha, zorder=1)
+                ax_map.add_patch(c)
+
+        # Antinodal lines (green solid)
+        for n in range(-n_max, n_max + 1):
+            v = n * lam / d
+            if abs(v) > 1:
+                continue
+            th = np.arcsin(v)
+            R  = 9.5
+            xe = R * np.cos(th); ye = R * np.sin(th)
+            lw_an = 2.5 if n == 0 else 1.7
+            ax_map.plot([0, xe],  [0, ye],  color=CG, lw=lw_an,
+                        alpha=0.75, solid_capstyle='round', zorder=3)
+            ax_map.plot([0, -xe], [0, -ye], color=CG, lw=lw_an,
+                        alpha=0.75, solid_capstyle='round', zorder=3)
+            lbl = 'A₀' if n == 0 else f'A{abs(n)}'
+            ax_map.text( xe * 1.06,  ye * 1.06, lbl,
+                        color=CG, fontsize=8.5, fontweight='bold', ha='center')
+            ax_map.text(-xe * 1.06, -ye * 1.06, lbl,
+                        color=CG, fontsize=8.5, fontweight='bold', ha='center')
+
+        # Nodal lines (red dashed)
+        for n in range(1, n_max + 1):
+            for sign in [1, -1]:
+                v = (n - 0.5) * lam / d
+                if abs(v) > 1:
+                    continue
+                th = np.arcsin(sign * v)
+                R  = 9.5
+                xe = R * np.cos(th); ye = R * np.sin(th)
+                ax_map.plot([0, xe],  [0, ye],  color=CRED, lw=1.2,
+                            ls='--', alpha=0.65, zorder=3)
+                ax_map.plot([0, -xe], [0, -ye], color=CRED, lw=1.2,
+                            ls='--', alpha=0.65, zorder=3)
+                ax_map.text( xe * 1.06,  ye * 1.06, f'N{n}',
+                            color=CRED, fontsize=7.5, ha='center')
+                ax_map.text(-xe * 1.06, -ye * 1.06, f'N{n}',
+                            color=CRED, fontsize=7.5, ha='center')
+
+        # Cosine waves from S₁ and S₂ to P_A (full opacity, bold)
+        _draw_wave_cos(ax_map, s1, P_A, lam, CB,  amp=0.26, lw=2.7, zorder=5)
+        _draw_wave_cos(ax_map, s2, P_A, lam, CR,  amp=0.26, lw=2.7, zorder=5)
+        # Cosine waves to P_N (slightly lighter)
+        _draw_wave_cos(ax_map, s1, P_N, lam, CB,  amp=0.22, lw=2.2,
+                       zorder=5, alpha=0.7)
+        _draw_wave_cos(ax_map, s2, P_N, lam, CR,  amp=0.22, lw=2.2,
+                       zorder=5, alpha=0.7)
+
+        # Centre-line dashes (very faint)
+        for pa in [P_A, P_N]:
+            ax_map.plot([s1[0], pa[0]], [s1[1], pa[1]],
+                        '--', color=CB, lw=0.9, alpha=0.25, zorder=2)
+            ax_map.plot([s2[0], pa[0]], [s2[1], pa[1]],
+                        '--', color=CR, lw=0.9, alpha=0.25, zorder=2)
+
+        # Phase-alignment badges at P_A and P_N
+        # P_A: both arrive at CREST (cos=+1) → double crest badge
+        ax_map.plot(*P_A, 'D', color=CG, ms=16, zorder=9,
+                    markeredgecolor='white', markeredgewidth=2.0)
+        ax_map.text(P_A[0] + 0.28, P_A[1] + 0.38,
+                    'P  (Antinode A₁)\nr₁=3λ  r₂=4λ  Δr=λ',
+                    color=CG, fontsize=8.5, fontweight='bold',
+                    va='bottom', zorder=10)
+
+        # P_N: crest meets trough → X badge
+        ax_map.plot(*P_N, 'v', color=CRED, ms=15, zorder=9,
+                    markeredgecolor='white', markeredgewidth=2.0)
+        ax_map.text(P_N[0] + 0.28, P_N[1] - 0.55,
+                    'Q  (Node N₁)\nr₁=3.5λ  r₂=4λ  Δr=λ/2',
+                    color=CRED, fontsize=8.5, fontweight='bold',
+                    va='top', zorder=10)
+
+        # Sources
+        for src, col, lbl in [(s1, CB, 'S₁'), (s2, CR, 'S₂')]:
+            ax_map.plot(*src, 'o', color=col, ms=14, zorder=8,
+                        markeredgecolor='white', markeredgewidth=2.0)
+            ax_map.text(src[0] - 0.42, src[1], lbl,
+                        color=col, fontsize=13, fontweight='bold',
+                        ha='right', va='center')
+
+        ax_map.set_xlim(-1.2, 11.0)
+        ax_map.set_ylim(-5.6, 5.8)
+        ax_map.set_xlabel('x  (cm)', fontsize=10, labelpad=4)
+        ax_map.set_ylabel('y  (cm)', fontsize=10, labelpad=4)
+        ax_map.set_title('Top view  (d = 6 cm, λ = 2 cm)',
+                         fontsize=10, color=CGR, pad=6)
+
+        # ── WAVE PANELS ──────────────────────────────────────────────────────
+        T  = np.linspace(0, 2, 500)   # 2 periods
+
+        # ── Antinode A₁ ──
+        # W1: cos(ωt)  [r₁=3λ → phase = cos(6π) = +1 → same as cos(0)]
+        # W2: cos(ωt)  [r₂=4λ → phase = cos(8π) = +1]
+        wA1  = np.cos(2 * np.pi * T)
+        wA2  = np.cos(2 * np.pi * T)
+        wAr  = wA1 + wA2
+
+        wave_data_A = [
+            (wA1, CB,   'W₁  (from S₁,  r₁ = 3λ)'),
+            (wA2, CR,   'W₂  (from S₂,  r₂ = 4λ)'),
+            (wAr, CG,   'Resultant  =  2A'),
+        ]
+        ylims_A = [(-1.3, 1.3), (-1.3, 1.3), (-2.5, 2.5)]
+
+        # Header for antinode block
+        axA[0].set_facecolor('#ecfdf5')
+        axA[0].text(0.5, 1.18,
+                    'At  P  →  ANTINODE A₁    (Δr = λ,  in-phase)',
+                    transform=axA[0].transAxes,
+                    ha='center', va='bottom', fontsize=9.5,
+                    fontweight='800', color=CG)
+
+        for ax_w, (w, col, lbl), ylim in zip(axA, wave_data_A, ylims_A):
+            ax_w.set_facecolor('#ecfdf5' if col != CG else '#dcfce7')
+            ax_w.axhline(0, color='#94a3b8', lw=0.8, ls=':')
+            ax_w.plot(T, w, color=col, lw=2.2)
+            ax_w.fill_between(T, 0, w, color=col, alpha=0.12)
+            ax_w.set_xlim(0, 2); ax_w.set_ylim(*ylim)
+            ax_w.set_xticks([]); ax_w.tick_params(axis='y', labelsize=7)
+            ax_w.set_yticks([ylim[0], 0, ylim[1]])
+            ax_w.yaxis.set_major_formatter(
+                plt.FuncFormatter(lambda v, _:
+                    ('2A' if abs(v - ylim[1]) < 0.1
+                     else ('-2A' if abs(v - ylim[0]) < 0.1
+                           else '0')))
+            )
+            ax_w.text(0.01, 0.82, lbl, transform=ax_w.transAxes,
+                      fontsize=8, color=col, fontweight='700',
+                      va='center')
+            for sp in ['top', 'right', 'bottom']:
+                ax_w.spines[sp].set_visible(False)
+            ax_w.spines['left'].set_color('#cbd5e1')
+
+        axA[2].set_xticks([0, 0.5, 1.0, 1.5, 2.0])
+        axA[2].set_xticklabels(['0', 'T/2', 'T', '3T/2', '2T'], fontsize=7)
+        # Highlight crest-meets-crest at t=0
+        for ax_w in axA[:2]:
+            ax_w.axvline(0, color='#f59e0b', lw=2.0, ls='--', alpha=0.9, zorder=5)
+            ax_w.axvline(1, color='#f59e0b', lw=2.0, ls='--', alpha=0.9, zorder=5)
+        axA[0].text(0.04, 1.0, 'crest', transform=axA[0].transAxes,
+                    fontsize=7, color='#d97706', fontweight='bold')
+
+        # ── Node N₁ ──
+        # W1: -cos(ωt)  [r₁=3.5λ → cos(7π) = -1 → arrives at TROUGH]
+        # W2: cos(ωt)   [r₂=4λ  → cos(8π) = +1 → arrives at CREST]
+        wN1  = -np.cos(2 * np.pi * T)
+        wN2  =  np.cos(2 * np.pi * T)
+        wNr  = wN1 + wN2   # = 0 always
+
+        wave_data_N = [
+            (wN1, CB,   'W₁  (from S₁,  r₁ = 3.5λ)'),
+            (wN2, CR,   'W₂  (from S₂,  r₂ = 4λ)'),
+            (wNr, '#94a3b8', 'Resultant  =  0'),
+        ]
+        ylims_N = [(-1.3, 1.3), (-1.3, 1.3), (-2.5, 2.5)]
+
+        axN[0].set_facecolor('#fff1f2')
+        axN[0].text(0.5, 1.18,
+                    'At  Q  →  NODE N₁    (Δr = λ/2,  anti-phase)',
+                    transform=axN[0].transAxes,
+                    ha='center', va='bottom', fontsize=9.5,
+                    fontweight='800', color=CRED)
+
+        for ax_w, (w, col, lbl), ylim in zip(axN, wave_data_N, ylims_N):
+            bg = '#fff1f2' if col != '#94a3b8' else '#f1f5f9'
+            ax_w.set_facecolor(bg)
+            ax_w.axhline(0, color='#94a3b8', lw=0.8, ls=':')
+            ax_w.plot(T, w, color=col, lw=2.2)
+            ax_w.fill_between(T, 0, w, color=col, alpha=0.12)
+            ax_w.set_xlim(0, 2); ax_w.set_ylim(*ylim)
+            ax_w.set_xticks([]); ax_w.tick_params(axis='y', labelsize=7)
+            ax_w.set_yticks([ylim[0], 0, ylim[1]])
+            ax_w.yaxis.set_major_formatter(
+                plt.FuncFormatter(lambda v, _:
+                    ('2A' if abs(v - ylim[1]) < 0.1
+                     else ('-2A' if abs(v - ylim[0]) < 0.1
+                           else '0')))
+            )
+            ax_w.text(0.01, 0.82, lbl, transform=ax_w.transAxes,
+                      fontsize=8, color=col, fontweight='700',
+                      va='center')
+            for sp in ['top', 'right', 'bottom']:
+                ax_w.spines[sp].set_visible(False)
+            ax_w.spines['left'].set_color('#cbd5e1')
+
+        axN[2].set_xticks([0, 0.5, 1.0, 1.5, 2.0])
+        axN[2].set_xticklabels(['0', 'T/2', 'T', '3T/2', '2T'], fontsize=7)
+        # Highlight crest-meets-trough at t=0
+        axN[0].axvline(0, color='#f59e0b', lw=2.0, ls='--', alpha=0.9, zorder=5)
+        axN[1].axvline(0, color='#f59e0b', lw=2.0, ls='--', alpha=0.9, zorder=5)
+        axN[0].text(0.04, 0.08, 'trough', transform=axN[0].transAxes,
+                    fontsize=7, color='#d97706', fontweight='bold')
+        axN[1].text(0.04, 1.0, 'crest', transform=axN[1].transAxes,
+                    fontsize=7, color='#d97706', fontweight='bold')
+
+        # Zero-line label for resultant
+        axN[2].text(0.5, 0.55, 'amplitude = 0',
+                    transform=axN[2].transAxes,
+                    ha='center', fontsize=9, color='#64748b',
+                    fontweight='bold')
+
+        fig.suptitle(
+            'Why is this an Antinode?  Why is that a Node?'
+            '  —  Follow the waves!',
+            fontsize=12, fontweight='bold', color=CDK, y=0.96)
+
+    return fig
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  FIGURE 10 — 3-step flowchart
 # ═══════════════════════════════════════════════════════════════════════════════
 def _fig_flowchart():
     with plt.rc_context(RC):
@@ -1100,6 +1379,52 @@ def render_summary():
                     unsafe_allow_html=True)
         st.latex(r"\Delta r = \left(n - \tfrac{1}{2}\right)\lambda \quad n = 1,2,3,\ldots")
         st.markdown("แอมพลิจูด = **0** (ผิวน้ำนิ่งสนิท)")
+
+    # ── 04b ทำไมถึงเป็นปฏิบัพ/บัพ — เชื่อมกราฟกับตำแหน่งจริง ─────────────────
+    st.markdown('<hr class="div"><p class="sh"><span class="pill">04b</span>'
+                'ทำไมจุดนี้ถึงเป็นปฏิบัพ?  ทำไมจุดนั้นถึงเป็นบัพ?</p>',
+                unsafe_allow_html=True)
+
+    st.markdown("""
+<div class="card cb">
+<h4>ดูจากการ "มาถึง" ของคลื่น</h4>
+<p>คลื่นแต่ละขบวนเดินทางเป็นระยะ r₁ และ r₂ ก่อนมาพบกัน<br>
+ถ้า r = nλ แปลว่าคลื่นเดินทางครบ n รอบพอดี — <strong>เฟสกลับมาที่เดิม (ยอดคลื่น)</strong><br>
+ถ้า r = (n+½)λ แปลว่าครึ่งรอบสุดท้ายค้างอยู่ — <strong>กลายเป็นรางคลื่น</strong></p>
+</div>
+""", unsafe_allow_html=True)
+
+    _show(_fig_interference_linked,
+          "ซ้าย: แผนที่การแทรกสอด — แนวปฏิบัพ A (เขียว) และแนวบัพ N (แดงประ) "
+          "พร้อมตัวอย่างจุด P (◆) บน A₁ และ Q (▼) บน N₁<br>"
+          "ขวา: กราฟ W₁ + W₂ = Resultant ที่แต่ละจุด  "
+          "เส้นสีส้มแสดงตำแหน่งเวลา t=0 (เมื่อ S₁,S₂ ปล่อยยอดคลื่น)")
+
+    c1, c2 = st.columns(2, gap="large")
+    with c1:
+        st.markdown("""
+<div class="card cg">
+<h4>จุด P บน Antinode A₁</h4>
+<ul>
+<li>r₁ = 6 cm = 3λ  →  มา 3 รอบ → กลับมาเป็น <strong>ยอด</strong></li>
+<li>r₂ = 8 cm = 4λ  →  มา 4 รอบ → กลับมาเป็น <strong>ยอด</strong></li>
+<li>Δr = 2 cm = <strong>1λ</strong>  →  ยอดพบยอด</li>
+<li>→ แอมพลิจูดรวม = <strong class="tg">2A</strong></li>
+</ul>
+</div>
+""", unsafe_allow_html=True)
+    with c2:
+        st.markdown("""
+<div class="card cr">
+<h4>จุด Q บน Node N₁</h4>
+<ul>
+<li>r₁ = 7 cm = 3.5λ  →  มา 3.5 รอบ → กลายเป็น <strong>ราง</strong></li>
+<li>r₂ = 8 cm = 4λ    →  มา 4 รอบ  → กลับมาเป็น <strong>ยอด</strong></li>
+<li>Δr = 1 cm = <strong>λ/2</strong>  →  ยอดพบราง</li>
+<li>→ แอมพลิจูดรวม = <strong class="tr">0</strong></li>
+</ul>
+</div>
+""", unsafe_allow_html=True)
 
     # ── 05 วิธีทำโจทย์ ────────────────────────────────────────────────────────
     st.markdown('<hr class="div"><p class="sh"><span class="pill">05</span>วิธีทำโจทย์ — 3 ขั้นตอน</p>',
