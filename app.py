@@ -7,9 +7,66 @@ st.set_page_config(
     page_title="แบบฝึกหัดฟิสิกส์: คลื่นกล",
     page_icon="🌊",
     layout="wide",
+    initial_sidebar_state="expanded",
 )
 
-# ── Question text ─────────────────────────────────────────────────────────────
+# ── Global CSS ────────────────────────────────────────────────────────────────
+st.markdown("""
+<style>
+/* ── Sidebar nav buttons: compact ── */
+section[data-testid="stSidebar"] .stButton > button {
+    padding: 1px 2px !important;
+    font-size: 0.72rem !important;
+    min-height: 26px !important;
+    height: 26px !important;
+    line-height: 1 !important;
+}
+/* ── Topic labels in sidebar ── */
+.topic-label {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #555;
+    margin: 6px 0 2px 0;
+    letter-spacing: 0.02em;
+}
+/* ── Question panel card ── */
+.question-card {
+    background: #ffffff;
+    border: 1px solid #e0e4ea;
+    border-radius: 10px;
+    padding: 20px 24px;
+}
+/* ── Answer panel card ── */
+.answer-card {
+    background: #f6f9ff;
+    border: 1px solid #c8d8f0;
+    border-left: 4px solid #2563eb;
+    border-radius: 10px;
+    padding: 18px 22px;
+    height: 100%;
+}
+/* ── Answer card header ── */
+.answer-header {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #2563eb;
+    margin-bottom: 10px;
+    letter-spacing: 0.03em;
+}
+/* ── Progress badge ── */
+.q-badge {
+    font-size: 0.8rem;
+    color: #888;
+    margin-left: 6px;
+}
+/* ── Remove excess top padding on main block ── */
+.block-container { padding-top: 1.5rem !important; }
+/* ── Divider color ── */
+hr { border-color: #e0e4ea !important; }
+</style>
+""", unsafe_allow_html=True)
+
+# ── Question bank ─────────────────────────────────────────────────────────────
 raw_questions = r"""เชือกเส้นหนึ่งสั่นด้วยความถี่ค่าหนึ่ง ทำให้เกิดคลื่นต่อเนื่องเคลื่อนที่ไปทางขวาดังรูปที่ (1) เป็นภาพถ่ายการสั่นของเส้นเชือกในช่วงหนึ่งและในขณะที่คลื่นเคลื่อนที่ไป อนุภาคของเส้นเชือก การเคลื่อนที่ ขึ้น - ลง ซึ่งเมื่อเขียนกราฟแสดงความสัมพันธ์ระหว่างการกระจัดกับเวลาจะได้ดัง รูปที่ (2) จงหาอัตราเร็วของคลื่นบนเส้นเชือก
 ในการสั่นเชือกที่มีความยาวมากเส้นหนึ่ง ปรากฏว่าหลังจากการสั่น 0.5 วินาที ได้คลื่นดังรูป จงหาอัตราเร็วของคลื่นบนเชือกเส้นนี้
 เชือกที่ยาวมาก และสม่ำเสมอเส้นหนึ่งถูกขึงตึง ถ้าเราสะบัดปลายเชือกอีกข้างหนึ่ง ขึ้นลงอย่างสม่ำเสมอ เป็นเวลา 0.5 วินาที รูปร่างของเส้นเชือกจะเปลี่ยนแปลงดังรูป จงหา (ก) ความยาวคลื่น (ข) อัตราเร็วของคลื่น (ค) ความถี่ของคลื่น (ง) ความถี่ที่สะบัดปลายเชือก
@@ -83,151 +140,180 @@ questions = [q.strip() for q in raw_questions.strip().split("\n") if q.strip()]
 
 # ── Topic groups ──────────────────────────────────────────────────────────────
 TOPICS = [
-    ("🌊 สมบัติพื้นฐานของคลื่น",          list(range(1, 13))),
-    ("📦 คลื่นดลและฟังก์ชันคลื่น",         list(range(13, 15))),
-    ("🔁 การสั่นแบบฮาร์โมนิก (SHM)",       list(range(15, 17))),
-    ("📐 เฟสของคลื่น",                     list(range(17, 28))),
-    ("➕ การซ้อนทับของคลื่น",              list(range(28, 32))),
-    ("↗️ การหักเหของคลื่น",                list(range(32, 43))),
-    ("🌀 การแทรกสอดของคลื่น",              list(range(43, 53))),
-    ("🎵 คลื่นนิ่งและการสั่นพ้อง",          list(range(53, 63))),
-    ("🔬 การเลี้ยวเบนของคลื่น",             list(range(63, 69))),
+    ("🌊 สมบัติพื้นฐาน",    list(range(1,  13))),
+    ("📦 คลื่นดล",           list(range(13, 15))),
+    ("🔁 SHM",               list(range(15, 17))),
+    ("📐 เฟส",               list(range(17, 28))),
+    ("➕ การซ้อนทับ",        list(range(28, 32))),
+    ("↗️ การหักเห",          list(range(32, 43))),
+    ("🌀 การแทรกสอด",        list(range(43, 53))),
+    ("🎵 คลื่นนิ่ง/สั่นพ้อง", list(range(53, 63))),
+    ("🔬 การเลี้ยวเบน",      list(range(63, 69))),
 ]
 
 # ── Session state ─────────────────────────────────────────────────────────────
-if "results" not in st.session_state:
-    st.session_state.results = {}
-if "selected_q" not in st.session_state:
-    st.session_state.selected_q = 1
-if "show_answer" not in st.session_state:
-    st.session_state.show_answer = False
+if "results"    not in st.session_state: st.session_state.results    = {}
+if "selected_q" not in st.session_state: st.session_state.selected_q = 1
+if "show_ans"   not in st.session_state: st.session_state.show_ans   = False
 
 
-def select_question(q_num: int):
-    st.session_state.selected_q = q_num
-    st.session_state.show_answer = False
+def _select(q: int):
+    st.session_state.selected_q = q
+    st.session_state.show_ans   = False
 
 
-def _q_badge(q_num: int) -> str:
-    if q_num not in st.session_state.results:
-        return ""
-    res = st.session_state.results[q_num]
-    if all(res):
-        return " ✅"
-    return " ⚠️" if any(res) else " ❌"
+def _badge(q: int) -> str:
+    if q not in st.session_state.results: return ""
+    res = st.session_state.results[q]
+    return " ✅" if all(res) else (" ⚠" if any(res) else " ✗")
 
 
-def _fmt_expected(expected: float, tol: float, unit: str) -> str:
+def _fmt(expected: float, tol: float, unit: str) -> str:
     u = f" {unit}" if unit else ""
-    if tol == 0:
-        return f"{int(round(expected))}{u}"
-    return f"{expected:.4g}{u}"
+    return f"{int(round(expected))}{u}" if tol == 0 else f"{expected:.4g}{u}"
 
 
-# ── Sidebar: topic navigator ──────────────────────────────────────────────────
+# ── Sidebar ───────────────────────────────────────────────────────────────────
 with st.sidebar:
-    st.markdown("## 🌊 คลื่นกล — เลือกข้อ")
+    st.markdown("### 🌊 คลื่นกล — เลือกข้อ")
+    st.caption(f"ข้อที่กำลังดู: **{st.session_state.selected_q}**")
     st.divider()
 
     for topic_name, q_nums in TOPICS:
-        st.markdown(f"**{topic_name}**")
-        # Render buttons in rows of 5
-        row_size = 5
-        for row_start in range(0, len(q_nums), row_size):
-            row = q_nums[row_start: row_start + row_size]
+        st.markdown(f'<p class="topic-label">{topic_name}</p>', unsafe_allow_html=True)
+        # 6 buttons per row for compact display
+        for row_start in range(0, len(q_nums), 6):
+            row = q_nums[row_start: row_start + 6]
             cols = st.columns(len(row))
             for col, qn in zip(cols, row):
-                badge = _q_badge(qn)
-                label = f"{qn}{badge}"
                 is_active = st.session_state.selected_q == qn
-                # Highlight active question with type="primary"
-                btn_type = "primary" if is_active else "secondary"
-                if col.button(label, key=f"nav_{qn}", type=btn_type, use_container_width=True):
-                    select_question(qn)
+                label = f"{qn}{_badge(qn)}"
+                if col.button(label, key=f"nav_{qn}",
+                              type="primary" if is_active else "secondary",
+                              use_container_width=True):
+                    _select(qn)
                     st.rerun()
-        st.markdown("")  # spacing between groups
 
-# ── Main area: single question view ──────────────────────────────────────────
-i = st.session_state.selected_q
-q_text = questions[i - 1]
-
-# Header
-col_title, col_nav = st.columns([6, 1])
-with col_title:
-    st.markdown(f"# ข้อที่ {i} {_q_badge(i)}")
-with col_nav:
-    prev_disabled = i <= 1
-    next_disabled = i >= len(questions)
-    c1, c2 = st.columns(2)
-    if c1.button("◀", disabled=prev_disabled, use_container_width=True):
-        select_question(i - 1)
-        st.rerun()
-    if c2.button("▶", disabled=next_disabled, use_container_width=True):
-        select_question(i + 1)
-        st.rerun()
-
-st.markdown(q_text)
-st.divider()
-
-# Visual
-fig = get_plot_for_question(i)
-if fig:
-    st.pyplot(fig, use_container_width=True)
-    st.divider()
-
-# Answer inputs / check
+# ── Main: two-column layout ───────────────────────────────────────────────────
+i       = st.session_state.selected_q
+q_text  = questions[i - 1]
 key_data = ANSWER_KEYS.get(i)
+answer   = ANSWERS.get(i)
 
-if key_data is None:
-    st.info("📝 ข้อนี้ตรวจโดยดูจากเฉลย (วาดรูป / อธิบาย)")
-    st.text_area("บันทึกคำตอบของคุณ", key=f"note_{i}", height=90,
-                 label_visibility="collapsed")
-else:
-    st.markdown("#### ✏️ กรอกคำตอบ")
-    n_parts = len(key_data)
-    cols = st.columns(min(n_parts, 3))
-    for j, (label, expected, unit, tol) in enumerate(key_data):
-        hint = f"เช่น {_fmt_expected(expected, tol, '')}"
-        unit_label = f" ({unit})" if unit else ""
-        with cols[j % min(n_parts, 3)]:
-            st.text_input(f"{label}{unit_label}", key=f"ans_{i}_{j}",
-                          placeholder=hint)
+# ── Top bar: title + prev/next ────────────────────────────────────────────────
+h_left, h_right = st.columns([7, 1])
+with h_left:
+    badge_str = _badge(i)
+    topic_of_q = next((t for t, qs in TOPICS if i in qs), "")
+    st.markdown(
+        f"<span style='font-size:0.78rem;color:#888;'>{topic_of_q}</span>",
+        unsafe_allow_html=True,
+    )
+    st.markdown(f"## ข้อที่ {i}{badge_str}")
+with h_right:
+    st.markdown("<div style='margin-top:28px'></div>", unsafe_allow_html=True)
+    ca, cb = st.columns(2)
+    if ca.button("◀", disabled=(i <= 1), use_container_width=True):
+        _select(i - 1); st.rerun()
+    if cb.button("▶", disabled=(i >= len(questions)), use_container_width=True):
+        _select(i + 1); st.rerun()
 
-    if st.button("✅ ตรวจคำตอบ", key=f"btn_{i}", type="primary"):
-        res = [
-            check_answer(st.session_state.get(f"ans_{i}_{j}", ""), exp, tol)
-            for j, (_, exp, _, tol) in enumerate(key_data)
-        ]
-        st.session_state.results[i] = res
+st.markdown("<hr style='margin:4px 0 16px 0'>", unsafe_allow_html=True)
 
-    if i in st.session_state.results:
-        st.markdown("---")
-        res = st.session_state.results[i]
-        all_ok = all(res)
-        if all_ok:
-            st.success("🎉 ถูกต้องทุกส่วน!")
-        for is_ok, (label, expected, unit, tol) in zip(res, key_data):
-            ans_str = _fmt_expected(expected, tol, unit)
-            if is_ok:
-                st.success(f"✓ {label}: ถูกต้อง!")
-            else:
-                st.error(f"✗ {label}: ยังไม่ถูก — เฉลย: **{ans_str}**")
+# ── Split: question left, answer right ───────────────────────────────────────
+left, right = st.columns([11, 9], gap="large")
 
-st.divider()
+# ──────────────────────── LEFT: question + inputs ─────────────────────────────
+with left:
+    # Question text
+    st.markdown(q_text)
 
-# Show / hide detailed answer
-if st.button(
-    "📖 ซ่อนเฉลยละเอียด" if st.session_state.show_answer else "📖 ดูเฉลยละเอียด",
-    key="toggle_answer",
-):
-    st.session_state.show_answer = not st.session_state.show_answer
-    st.rerun()
+    # Figure (compact)
+    fig = get_plot_for_question(i)
+    if fig:
+        st.pyplot(fig, use_container_width=True)
 
-if st.session_state.show_answer:
-    answer = ANSWERS.get(i)
-    if answer:
-        st.markdown(answer)
+    st.markdown("<hr style='margin:12px 0'>", unsafe_allow_html=True)
+
+    # Inputs / check
+    if key_data is None:
+        st.info("📝 ข้อนี้ตรวจโดยดูจากเฉลย")
+        st.text_area("บันทึกคำตอบ", key=f"note_{i}", height=80,
+                     label_visibility="collapsed")
     else:
-        st.info("ยังไม่มีเฉลยสำหรับข้อนี้")
+        st.markdown("**✏️ กรอกคำตอบ**")
+        n = len(key_data)
+        cols = st.columns(min(n, 2))   # max 2 cols to keep it readable
+        for j, (label, exp, unit, tol) in enumerate(key_data):
+            unit_lbl = f" ({unit})" if unit else ""
+            with cols[j % min(n, 2)]:
+                st.text_input(
+                    f"{label}{unit_lbl}",
+                    key=f"ans_{i}_{j}",
+                    placeholder=f"เช่น {_fmt(exp, tol, '')}",
+                )
+
+        if st.button("✅ ตรวจคำตอบ", key=f"btn_{i}", type="primary", use_container_width=True):
+            res = [
+                check_answer(st.session_state.get(f"ans_{i}_{j}", ""), exp, tol)
+                for j, (_, exp, _, tol) in enumerate(key_data)
+            ]
+            st.session_state.results[i] = res
+
+        if i in st.session_state.results:
+            res = st.session_state.results[i]
+            st.markdown("<div style='margin-top:8px'></div>", unsafe_allow_html=True)
+            for is_ok, (label, exp, unit, tol) in zip(res, key_data):
+                ans_str = _fmt(exp, tol, unit)
+                if is_ok:
+                    st.success(f"✓ {label}: ถูกต้อง!")
+                else:
+                    st.error(f"✗ {label}: ยังไม่ถูก — เฉลย: **{ans_str}**")
+
+# ──────────────────────── RIGHT: solution panel ───────────────────────────────
+with right:
+    # Sticky-style header for the answer panel
+    st.markdown(
+        """
+        <div style="
+            background:#2563eb;
+            color:white;
+            border-radius:8px 8px 0 0;
+            padding:8px 16px;
+            font-size:0.85rem;
+            font-weight:700;
+            letter-spacing:0.04em;
+        ">📖 เฉลยละเอียด</div>
+        <div style="
+            background:#f6f9ff;
+            border:1px solid #c8d8f0;
+            border-top:none;
+            border-radius:0 0 8px 8px;
+            padding:16px 18px;
+            min-height:200px;
+        ">
+        """,
+        unsafe_allow_html=True,
+    )
+
+    if not st.session_state.show_ans:
+        st.markdown(
+            "<div style='text-align:center;padding:40px 0;color:#aaa;font-size:0.9rem;'>"
+            "กดปุ่มด้านล่างเพื่อดูเฉลย</div>",
+            unsafe_allow_html=True,
+        )
+    else:
+        if answer:
+            st.markdown(answer)
+        else:
+            st.info("ยังไม่มีเฉลยสำหรับข้อนี้")
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    # Toggle button sits just below the panel
+    btn_label = "🙈 ซ่อนเฉลย" if st.session_state.show_ans else "👁 แสดงเฉลย"
+    if st.button(btn_label, key="toggle_ans", use_container_width=True):
+        st.session_state.show_ans = not st.session_state.show_ans
+        st.rerun()
 
 st.caption("พัฒนาโดยใช้ Streamlit 🎈")
