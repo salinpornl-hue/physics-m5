@@ -1,6 +1,6 @@
 """
-summary.py  —  สรุปการแทรกสอดของคลื่นน้ำ  ระดับ ม.5
-Clean circular-wavefront style.  All Thai text in Streamlit markdown only.
+summary.py  —  Water Wave Interference Summary  (Grade 11)
+Circular-wavefront style.  All text in English.
 """
 import streamlit as st
 import numpy as np
@@ -483,7 +483,7 @@ def _fig_conditions():
                     ha='center', va='center', fontsize=9,
                     color=col, style='italic')
 
-        fig.suptitle('Conditions for in-phase sources (เฟสตรงกัน)',
+        fig.suptitle('Conditions for in-phase coherent sources',
                      fontsize=10.5, color=CGR, y=1.02)
         fig.tight_layout(pad=0.9)
     return fig
@@ -717,10 +717,10 @@ def _fig_antiphase_waves():
         col_configs = [
             # (source_phase, col_title, col_title_col, bg_waves, bg_result,
             #  result_col, outcome_lbl)
-            (0,      'IN-PHASE sources\n(เฟสตรงกัน,  Δφ = 0)',
-             CG,   '#f0f7ff', '#f0fdf4', CG,   'ปฏิบัพ\n(ANTINODE)\nAmplitude = 2A'),
-            (np.pi, 'ANTI-PHASE sources\n(เฟสตรงข้าม,  Δφ = π)',
-             CRED, '#fff8f8', '#fff5f5', CRED, 'บัพ\n(NODE)\nAmplitude = 0'),
+            (0,      'IN-PHASE sources\n(delta-phi = 0)',
+             CG,   '#f0f7ff', '#f0fdf4', CG,   'ANTINODE\nAmplitude = 2A'),
+            (np.pi, 'ANTI-PHASE sources\n(delta-phi = pi)',
+             CRED, '#fff8f8', '#fff5f5', CRED, 'NODE\nAmplitude = 0'),
         ]
 
         row_labels  = ['Wave from S₁', 'Wave from S₂', 'Resultant\n(water surface)']
@@ -851,7 +851,7 @@ def _fig_barrier():
                        ((d/2 + gap), 5.5)]:
             ax.fill_between([-0.22, 0.22], y0, y1,
                             color='#475569', alpha=0.92, zorder=5)
-        ax.text(-0.9, -4.5, 'Barrier\n(แผ่นกั้น)', color='#475569',
+        ax.text(-0.9, -4.5, 'Barrier', color='#475569',
                 fontsize=9, ha='center', va='top', rotation=90)
 
         # Openings
@@ -1283,151 +1283,178 @@ def _fig_flowchart():
 def render_summary():
     st.markdown(_CSS, unsafe_allow_html=True)
 
-    # ── Hero ─────────────────────────────────────────────────────────────────
+    # ── Hero ──────────────────────────────────────────────────────────────────
     st.markdown("""
 <div class="hero">
-  <h1>การแทรกสอดของคลื่นน้ำ</h1>
-  <p>Water Wave Interference &nbsp;·&nbsp; สรุปครบสำหรับ ม.5 พร้อมสูตรและโจทย์ตัวอย่าง</p>
+  <h1>Water Wave Interference</h1>
+  <p>Complete Summary &nbsp;&middot;&nbsp; Formulas, Diagrams &amp; Worked Examples</p>
 </div>
 """, unsafe_allow_html=True)
 
-    # ── 01 หลักการ ────────────────────────────────────────────────────────────
-    st.markdown('<p class="sh"><span class="pill">01</span>หลักการซ้อนทับ — ทำไมถึงเกิดการแทรกสอด?</p>',
+    # ─────────────────────────────────────────────────────────────────────────
+    # 01  SUPERPOSITION PRINCIPLE
+    # ─────────────────────────────────────────────────────────────────────────
+    st.markdown('<p class="sh"><span class="pill">01</span>'
+                'Superposition Principle — How Does Interference Arise?</p>',
                 unsafe_allow_html=True)
 
-    c1, c2 = st.columns([1, 1.05], gap="large")
+    c1, c2 = st.columns([1, 1.1], gap="large")
     with c1:
         st.markdown("""
 <div class="card cb">
-<h4>หลักการซ้อนทับ (Superposition)</h4>
-<p>เมื่อคลื่นน้ำสองขบวนมาพบกัน ระดับน้ำ ณ จุดนั้น
-= ผลรวมของระดับน้ำจากแต่ละขบวน</p>
+<h4>Superposition Principle</h4>
+<p>When two water waves meet, the water-surface displacement at that point
+equals the <strong>algebraic sum</strong> of the two individual displacements.</p>
 <ul>
-<li><strong>ยอดพบยอด</strong> → ผิวน้ำสูง 2 เท่า (เสริมกัน)</li>
-<li><strong>ยอดพบราง</strong> → ผิวน้ำนิ่ง (หักล้างกัน)</li>
+<li><strong>Crest + Crest</strong> &rarr; surface rises to <em>2&times; amplitude</em> (constructive)</li>
+<li><strong>Crest + Trough</strong> &rarr; surface stays flat, amplitude = 0 (destructive)</li>
 </ul>
 </div>
 <div class="card cs" style="margin-top:10px">
-<h4>เงื่อนไขของแหล่งกำเนิด</h4>
-<p>ต้องเป็น <strong>แหล่งกำเนิดเชิงเดียวกัน (Coherent)</strong><br>
-ความถี่เท่ากัน + ผลต่างเฟสคงที่ตลอดเวลา<br>
-→ ใน Lab ใช้แท่งสั่น (dipper) 2 อันติดแกนเดียวกัน</p>
+<h4>Source Requirements</h4>
+<p>Sources must be <strong>coherent</strong> &mdash;<br>
+same frequency &amp; constant phase difference.<br>
+In the ripple tank: two dippers on the <em>same vibrating bar</em>.</p>
 </div>
 """, unsafe_allow_html=True)
     with c2:
         _show(_fig_superposition,
-              "บน: ยอดพบยอด → สูง 2A (เสริมกัน) &nbsp;|&nbsp; ล่าง: ยอดพบราง → สุทธิ = 0 (หักล้างกัน)")
+              "Top: crest meets crest &rarr; 2A (constructive) &nbsp;|&nbsp; "
+              "Bottom: crest meets trough &rarr; net = 0 (destructive)")
 
-    # ── 02 ภาพคลื่นวงกลม ──────────────────────────────────────────────────────
-    st.markdown('<hr class="div"><p class="sh"><span class="pill">02</span>รูปแบบการแทรกสอด — มองจากด้านบน</p>',
+    # ─────────────────────────────────────────────────────────────────────────
+    # 02  INTERFERENCE PATTERN — TOP VIEW
+    # ─────────────────────────────────────────────────────────────────────────
+    st.markdown('<hr class="div"><p class="sh"><span class="pill">02</span>'
+                'Interference Pattern — Top View</p>',
                 unsafe_allow_html=True)
 
     _show(_fig_two_sources,
-          "วงกลมสีน้ำเงิน = สันคลื่นจาก S₁ &nbsp;|&nbsp; วงกลมสีแดง = สันคลื่นจาก S₂ &nbsp;|&nbsp; "
-          "แถบเขียว = เสริมกัน (ปฏิบัพ) &nbsp;|&nbsp; แถบแดง = หักล้างกัน (บัพ)")
+          "Blue rings = crests from S&#x2081; &nbsp;|&nbsp; "
+          "Red rings = crests from S&#x2082; &nbsp;|&nbsp; "
+          "Green band = constructive (antinode) &nbsp;|&nbsp; "
+          "Red band = destructive (node)")
 
     st.markdown("""
 <div class="card cb">
-<h4>อ่านรูปอย่างไร?</h4>
+<h4>How to Read This Diagram</h4>
 <ul>
-<li><strong>วงกลมสีน้ำเงิน</strong> = สันคลื่น (crest) จาก S₁</li>
-<li><strong>วงกลมสีแดง</strong> = สันคลื่น (crest) จาก S₂</li>
-<li>จุดที่วงกลมน้ำเงิน + น้ำเงินตัดกัน = <strong class="tg">สันพบสัน → ปฏิบัพ</strong></li>
-<li>จุดที่วงกลมน้ำเงิน + แดงตัดกัน = <strong class="tr">สันพบราง → บัพ</strong></li>
-<li>เส้นสีเขียวลากผ่านปฏิบัพทุกจุด = <strong>แนวปฏิบัพ</strong></li>
-<li>เส้นประสีแดงลากผ่านบัพทุกจุด = <strong>แนวบัพ</strong></li>
+<li><strong>Blue rings</strong> = wave crests radiating from S&#x2081;</li>
+<li><strong>Red rings</strong> = wave crests radiating from S&#x2082;</li>
+<li>Where blue + blue rings cross &rarr; <strong class="tg">crest meets crest &rarr; ANTINODE</strong></li>
+<li>Where blue + red rings cross &rarr; <strong class="tr">crest meets trough &rarr; NODE</strong></li>
+<li>Green solid line through all antinodes &rarr; <strong>antinodal line</strong></li>
+<li>Red dashed line through all nodes &rarr; <strong>nodal line</strong></li>
 </ul>
 </div>
 """, unsafe_allow_html=True)
 
-    # ── 03 ผลต่างระยะทาง ──────────────────────────────────────────────────────
-    st.markdown('<hr class="div"><p class="sh"><span class="pill">03</span>ผลต่างระยะทาง  Δr</p>',
+    # ─────────────────────────────────────────────────────────────────────────
+    # 03  PATH DIFFERENCE  Δr
+    # ─────────────────────────────────────────────────────────────────────────
+    st.markdown('<hr class="div"><p class="sh"><span class="pill">03</span>'
+                'Path Difference &Delta;r</p>',
                 unsafe_allow_html=True)
 
-    c1, c2 = st.columns([1.05, 1], gap="large")
+    c1, c2 = st.columns([1.1, 1], gap="large")
     with c1:
         _show(_fig_path_diff,
-              "ภาพด้านบน — วงกลมแสดงสันคลื่น, เส้นประแสดงเส้นทางจาก S₁ และ S₂ มายัง P")
+              "Rings = wave crests &nbsp;|&nbsp; "
+              "Wavy lines = waves travelling along each path from S&#x2081; and S&#x2082; to P")
     with c2:
-        st.markdown('<div class="card cb"><h4>นิยาม</h4></div>', unsafe_allow_html=True)
+        st.markdown('<div class="card cb"><h4>Definition</h4></div>',
+                    unsafe_allow_html=True)
         st.latex(r"\Delta r \;=\; |r_1 - r_2|")
         st.markdown("""
 <div class="card cb" style="margin-top:12px">
-<h4>ทำไม Δr ถึงสำคัญ?</h4>
-<p>คลื่นจาก S₁ เดินทาง r₁  คลื่นจาก S₂ เดินทาง r₂<br>
-ถ้า Δr = nλ → เดินทางต่างกัน n รอบพอดี →
-มาถึง P พร้อมกัน → <strong class="tg">เสริมกัน</strong><br>
-ถ้า Δr = (n−½)λ → เดินทางต่างกัน ½ รอบ →
-มาถึง P ต่างเฟสกัน 180° → <strong class="tr">หักล้างกัน</strong></p>
+<h4>Why Does &Delta;r Matter?</h4>
+<p>Wave from S&#x2081; travels distance r&#x2081;. &nbsp;Wave from S&#x2082; travels r&#x2082;.<br>
+If &Delta;r = n&lambda; &rarr; difference is exactly <em>n whole cycles</em>
+&rarr; both arrive at P <strong>in phase</strong> &rarr;
+<strong class="tg">constructive</strong><br>
+If &Delta;r = (n&minus;&frac12;)&lambda; &rarr; half-cycle offset
+&rarr; arrive <strong>180&deg; out of phase</strong> &rarr;
+<strong class="tr">destructive</strong></p>
 </div>
 """, unsafe_allow_html=True)
 
-    # ── 04 เงื่อนไข ──────────────────────────────────────────────────────────
-    st.markdown('<hr class="div"><p class="sh"><span class="pill">04</span>เงื่อนไขปฏิบัพและบัพ</p>',
+    # ─────────────────────────────────────────────────────────────────────────
+    # 04  CONDITIONS FOR ANTINODES AND NODES
+    # ─────────────────────────────────────────────────────────────────────────
+    st.markdown('<hr class="div"><p class="sh"><span class="pill">04</span>'
+                'Conditions for Antinodes and Nodes</p>',
                 unsafe_allow_html=True)
 
     _show(_fig_conditions)
 
     c1, c2 = st.columns(2, gap="large")
     with c1:
-        st.markdown('<div class="card cg"><h4>ปฏิบัพ (Antinode) — เสริมกัน</h4></div>',
+        st.markdown('<div class="card cg"><h4>Antinode (Constructive Interference)</h4></div>',
                     unsafe_allow_html=True)
-        st.latex(r"\Delta r = n\lambda \quad n = 0,1,2,3,\ldots")
-        st.markdown("แอมพลิจูด = **2A** (ผิวน้ำสูงสุด)")
+        st.latex(r"\Delta r = n\lambda \qquad n = 0,\,1,\,2,\,3,\,\ldots")
+        st.markdown("Resultant amplitude = **2A** &nbsp;(maximum)")
     with c2:
-        st.markdown('<div class="card cr"><h4>บัพ (Node) — หักล้างกัน</h4></div>',
+        st.markdown('<div class="card cr"><h4>Node (Destructive Interference)</h4></div>',
                     unsafe_allow_html=True)
-        st.latex(r"\Delta r = \left(n - \tfrac{1}{2}\right)\lambda \quad n = 1,2,3,\ldots")
-        st.markdown("แอมพลิจูด = **0** (ผิวน้ำนิ่งสนิท)")
+        st.latex(r"\Delta r = \left(n - \tfrac{1}{2}\right)\lambda \qquad n = 1,\,2,\,3,\,\ldots")
+        st.markdown("Resultant amplitude = **0** &nbsp;(water surface stays flat)")
 
-    # ── 04b ทำไมถึงเป็นปฏิบัพ/บัพ — เชื่อมกราฟกับตำแหน่งจริง ─────────────────
+    # ─────────────────────────────────────────────────────────────────────────
+    # 04b  WHY IS THIS AN ANTINODE? WHY IS THAT A NODE?
+    # ─────────────────────────────────────────────────────────────────────────
     st.markdown('<hr class="div"><p class="sh"><span class="pill">04b</span>'
-                'ทำไมจุดนี้ถึงเป็นปฏิบัพ?  ทำไมจุดนั้นถึงเป็นบัพ?</p>',
+                'Why Is This Point an Antinode? Why Is That One a Node?'
+                ' &mdash; Follow the Waves!</p>',
                 unsafe_allow_html=True)
 
     st.markdown("""
 <div class="card cb">
-<h4>ดูจากการ "มาถึง" ของคลื่น</h4>
-<p>คลื่นแต่ละขบวนเดินทางเป็นระยะ r₁ และ r₂ ก่อนมาพบกัน<br>
-ถ้า r = nλ แปลว่าคลื่นเดินทางครบ n รอบพอดี — <strong>เฟสกลับมาที่เดิม (ยอดคลื่น)</strong><br>
-ถ้า r = (n+½)λ แปลว่าครึ่งรอบสุดท้ายค้างอยู่ — <strong>กลายเป็นรางคลื่น</strong></p>
+<h4>Track the Arrival Phase of Each Wave</h4>
+<p>Each wave travels a different distance (r&#x2081; or r&#x2082;) before reaching the point.<br>
+If r = n&lambda; &rarr; exactly <em>n full cycles</em> &rarr;
+<strong>arrives back at CREST</strong> (same phase as when it left the source).<br>
+If r = (n + &frac12;)&lambda; &rarr; half-cycle leftover &rarr;
+<strong>arrives at TROUGH</strong> (opposite phase).</p>
 </div>
 """, unsafe_allow_html=True)
 
     _show(_fig_interference_linked,
-          "ซ้าย: แผนที่การแทรกสอด — แนวปฏิบัพ A (เขียว) และแนวบัพ N (แดงประ) "
-          "พร้อมตัวอย่างจุด P (◆) บน A₁ และ Q (▼) บน N₁<br>"
-          "ขวา: กราฟ W₁ + W₂ = Resultant ที่แต่ละจุด  "
-          "เส้นสีส้มแสดงตำแหน่งเวลา t=0 (เมื่อ S₁,S₂ ปล่อยยอดคลื่น)")
+          "Left: interference map &mdash; antinodal lines A (green solid) and nodal lines N (red dashed), "
+          "with example points P (&diams;) on A&#x2081; and Q (&triangledown;) on N&#x2081;. &nbsp;|&nbsp; "
+          "Right: wave graphs W&#x2081; + W&#x2082; = Resultant at each point. "
+          "Orange dashed lines mark t = 0 (when sources emit a crest).")
 
     c1, c2 = st.columns(2, gap="large")
     with c1:
         st.markdown("""
 <div class="card cg">
-<h4>จุด P บน Antinode A₁</h4>
+<h4>Point P on Antinode A&#x2081;</h4>
 <ul>
-<li>r₁ = 6 cm = 3λ  →  มา 3 รอบ → กลับมาเป็น <strong>ยอด</strong></li>
-<li>r₂ = 8 cm = 4λ  →  มา 4 รอบ → กลับมาเป็น <strong>ยอด</strong></li>
-<li>Δr = 2 cm = <strong>1λ</strong>  →  ยอดพบยอด</li>
-<li>→ แอมพลิจูดรวม = <strong class="tg">2A</strong></li>
+<li>r&#x2081; = 6 cm = 3&lambda; &rarr; 3 full cycles &rarr; arrives as <strong>CREST</strong></li>
+<li>r&#x2082; = 8 cm = 4&lambda; &rarr; 4 full cycles &rarr; arrives as <strong>CREST</strong></li>
+<li>&Delta;r = 2 cm = <strong>1&lambda;</strong> &rarr; crest meets crest</li>
+<li>Resultant amplitude = <strong class="tg">2A</strong></li>
 </ul>
 </div>
 """, unsafe_allow_html=True)
     with c2:
         st.markdown("""
 <div class="card cr">
-<h4>จุด Q บน Node N₁</h4>
+<h4>Point Q on Node N&#x2081;</h4>
 <ul>
-<li>r₁ = 7 cm = 3.5λ  →  มา 3.5 รอบ → กลายเป็น <strong>ราง</strong></li>
-<li>r₂ = 8 cm = 4λ    →  มา 4 รอบ  → กลับมาเป็น <strong>ยอด</strong></li>
-<li>Δr = 1 cm = <strong>λ/2</strong>  →  ยอดพบราง</li>
-<li>→ แอมพลิจูดรวม = <strong class="tr">0</strong></li>
+<li>r&#x2081; = 7 cm = 3.5&lambda; &rarr; 3.5 cycles &rarr; arrives as <strong>TROUGH</strong></li>
+<li>r&#x2082; = 8 cm = 4&lambda; &nbsp;&rarr; 4 full cycles &rarr; arrives as <strong>CREST</strong></li>
+<li>&Delta;r = 1 cm = <strong>&lambda;/2</strong> &rarr; crest meets trough</li>
+<li>Resultant amplitude = <strong class="tr">0</strong></li>
 </ul>
 </div>
 """, unsafe_allow_html=True)
 
-    # ── 05 วิธีทำโจทย์ ────────────────────────────────────────────────────────
-    st.markdown('<hr class="div"><p class="sh"><span class="pill">05</span>วิธีทำโจทย์ — 3 ขั้นตอน</p>',
+    # ─────────────────────────────────────────────────────────────────────────
+    # 05  PROBLEM-SOLVING METHOD
+    # ─────────────────────────────────────────────────────────────────────────
+    st.markdown('<hr class="div"><p class="sh"><span class="pill">05</span>'
+                'Problem-Solving Method &mdash; 3 Steps</p>',
                 unsafe_allow_html=True)
 
     _show(_fig_flowchart)
@@ -1436,196 +1463,217 @@ def render_summary():
     with c1:
         st.markdown("""
 <div class="card cy">
-<h4>ตัวอย่างที่ 1  (จาก Q43)</h4>
-<p>S₁S₂ = d = 10 cm,  λ = 2.5 cm<br>
-จุด A: r₁ = 12 cm, r₂ = 17 cm</p>
+<h4>Worked Example 1 &nbsp;(Q43)</h4>
+<p>d = 10 cm, &lambda; = 2.5 cm<br>
+Point A: r&#x2081; = 12 cm, r&#x2082; = 17 cm</p>
 <ul>
-<li>Δr = |12 − 17| = <strong>5 cm</strong></li>
-<li>k = 5 ÷ 2.5 = <strong>2.0</strong> (จำนวนเต็ม)</li>
-<li>→ <strong class="tg">ปฏิบัพ A₂</strong></li>
+<li>&Delta;r = |12 &minus; 17| = <strong>5 cm</strong></li>
+<li>k = 5 &div; 2.5 = <strong>2.0</strong> &nbsp;(integer)</li>
+<li>&rarr; <strong class="tg">Antinode A&#x2082;</strong></li>
 </ul>
 </div>
 """, unsafe_allow_html=True)
     with c2:
         st.markdown("""
 <div class="card cy">
-<h4>ตัวอย่างที่ 2  (จาก Q43)</h4>
-<p>λ = 2.5 cm<br>
-จุด B: r₁ = 14.5 cm, r₂ = 15.75 cm</p>
+<h4>Worked Example 2 &nbsp;(Q43)</h4>
+<p>&lambda; = 2.5 cm<br>
+Point B: r&#x2081; = 14.5 cm, r&#x2082; = 15.75 cm</p>
 <ul>
-<li>Δr = |14.5 − 15.75| = <strong>1.25 cm</strong></li>
-<li>k = 1.25 ÷ 2.5 = <strong>0.5</strong> (ลงท้าย .5)</li>
-<li>→ <strong class="tr">บัพ N₁</strong></li>
+<li>&Delta;r = |14.5 &minus; 15.75| = <strong>1.25 cm</strong></li>
+<li>k = 1.25 &div; 2.5 = <strong>0.5</strong> &nbsp;(ends in .5)</li>
+<li>&rarr; <strong class="tr">Node N&#x2081;</strong></li>
 </ul>
 </div>
 """, unsafe_allow_html=True)
 
-    # ── 06 Pattern ────────────────────────────────────────────────────────────
-    st.markdown('<hr class="div"><p class="sh"><span class="pill">06</span>รูปแบบการแทรกสอดทั้งหมด</p>',
+    # ─────────────────────────────────────────────────────────────────────────
+    # 06  FULL INTERFERENCE PATTERN
+    # ─────────────────────────────────────────────────────────────────────────
+    st.markdown('<hr class="div"><p class="sh"><span class="pill">06</span>'
+                'Full Interference Pattern</p>',
                 unsafe_allow_html=True)
 
     _show(_fig_pattern,
-          "เส้นสีเขียว = แนวปฏิบัพ (เสริมกัน) &nbsp;|&nbsp; เส้นประสีแดง = แนวบัพ (หักล้างกัน)")
+          "Green solid lines = antinodal lines (constructive) &nbsp;|&nbsp; "
+          "Red dashed lines = nodal lines (destructive)")
 
-    # ── 07 นับแนว ─────────────────────────────────────────────────────────────
-    st.markdown('<hr class="div"><p class="sh"><span class="pill">07</span>การนับจำนวนแนว</p>',
+    # ─────────────────────────────────────────────────────────────────────────
+    # 07  COUNTING ANTINODAL AND NODAL LINES
+    # ─────────────────────────────────────────────────────────────────────────
+    st.markdown('<hr class="div"><p class="sh"><span class="pill">07</span>'
+                'Counting Antinodal and Nodal Lines</p>',
                 unsafe_allow_html=True)
 
     _show(_fig_ruler,
-          "ตำแหน่งปฏิบัพ ◆ และบัพ ▼ ทุกจุดบนเส้น S₁S₂  (d = 10 cm, λ = 2 cm)")
+          "Antinodes (&diams;) and nodes (&triangledown;) along the S&#x2081;S&#x2082; axis "
+          "&nbsp;(d = 10 cm, &lambda; = 2 cm)")
 
-    st.markdown('<div class="card cb"><h4>สูตร — หา n_max ก่อน</h4></div>',
+    st.markdown('<div class="card cb"><h4>Formula &mdash; Find n<sub>max</sub> First</h4></div>',
                 unsafe_allow_html=True)
     st.latex(r"n_{\max} = \left\lfloor \frac{d}{\lambda} \right\rfloor "
-             r"\quad \text{(เอาเฉพาะจำนวนเต็ม ทิ้งทศนิยม)}")
+             r"\quad \text{(integer part only — drop any remainder)}")
 
     c1, c2 = st.columns(2, gap="large")
     with c1:
-        st.markdown("**จำนวนแนวปฏิบัพทั้งหมด (รวม A₀):**")
+        st.markdown("**Total antinodal lines (including A&#x2080;):**")
         st.latex(r"2\,n_{\max} + 1")
     with c2:
-        st.markdown("**จำนวนแนวบัพทั้งหมด:**")
+        st.markdown("**Total nodal lines:**")
         st.latex(r"2\,n_{\max}")
 
     st.markdown("""
 <table class="rt">
 <thead><tr>
-  <th>สิ่งที่นับ</th>
-  <th>บนแนว S₁S₂ (รวมจุด S₁ S₂)</th>
-  <th>ระหว่าง S₁S₂ (ไม่รวม S₁ S₂)</th>
+  <th>What to count</th>
+  <th>On the S&#x2081;S&#x2082; axis (includes S&#x2081;, S&#x2082;)</th>
+  <th>Between S&#x2081; and S&#x2082; (excludes endpoints)</th>
 </tr></thead>
 <tbody>
-<tr><td><strong>ปฏิบัพ</strong></td>
-    <td class="tg">2n₀ + 1</td>
-    <td class="tg">2n₀ − 1</td></tr>
-<tr><td><strong>บัพ</strong></td>
-    <td class="tr">2n₀</td>
-    <td class="tr">2(n₀ − 1)</td></tr>
+<tr><td><strong>Antinodes</strong></td>
+    <td class="tg">2n&#x2080; + 1</td>
+    <td class="tg">2n&#x2080; &minus; 1</td></tr>
+<tr><td><strong>Nodes</strong></td>
+    <td class="tr">2n&#x2080;</td>
+    <td class="tr">2(n&#x2080; &minus; 1)</td></tr>
 </tbody>
 </table>
 <p style="font-size:.8rem;color:#64748b;margin-top:5px">
-* ใช้เมื่อ d หาร λ ลงตัวพอดี คือ d = n₀λ
+* Valid when d is an exact multiple of &lambda;, i.e. d = n&#x2080;&lambda;
 </p>
 """, unsafe_allow_html=True)
 
     st.markdown("""
 <div class="card cy">
-<h4>ตัวอย่าง  (จาก Q44 และ Q45)</h4>
-<p>d = 12 cm, λ = 4 cm  →  n₀ = 12/4 = <strong>3</strong></p>
+<h4>Worked Examples &nbsp;(Q44 &amp; Q45)</h4>
+<p>d = 12 cm, &lambda; = 4 cm &nbsp;&rarr;&nbsp; n&#x2080; = 12/4 = <strong>3</strong></p>
 <ul>
-<li>แนวปฏิบัพทั้งหมด = 2×3+1 = <strong class="tg">7 แนว</strong></li>
-<li>แนวบัพทั้งหมด = 2×3 = <strong class="tr">6 แนว</strong></li>
+<li>Total antinodal lines = 2&times;3 + 1 = <strong class="tg">7 lines</strong></li>
+<li>Total nodal lines = 2&times;3 = <strong class="tr">6 lines</strong></li>
 </ul>
 <hr style="border:none;border-top:1px solid #e2e8f0;margin:10px 0">
-<p>d = 25 cm, λ = 5 cm  →  n₀ = 5</p>
+<p>d = 25 cm, &lambda; = 5 cm &nbsp;&rarr;&nbsp; n&#x2080; = 5</p>
 <ul>
-<li>ปฏิบัพบนแนว S₁S₂ = 2×5+1 = <strong class="tg">11 แนว</strong>  |  ระหว่าง S₁S₂ = 2×5−1 = <strong class="tg">9 แนว</strong></li>
-<li>บัพบนแนว S₁S₂ = 2×5 = <strong class="tr">10 แนว</strong>  |  ระหว่าง S₁S₂ = 2(5−1) = <strong class="tr">8 แนว</strong></li>
+<li>Antinodes on S&#x2081;S&#x2082; = 2&times;5 + 1 = <strong class="tg">11</strong>
+&nbsp;|&nbsp; between S&#x2081;S&#x2082; = 2&times;5 &minus; 1 = <strong class="tg">9</strong></li>
+<li>Nodes on S&#x2081;S&#x2082; = 2&times;5 = <strong class="tr">10</strong>
+&nbsp;|&nbsp; between S&#x2081;S&#x2082; = 2(5 &minus; 1) = <strong class="tr">8</strong></li>
 </ul>
 </div>
 """, unsafe_allow_html=True)
 
-    # ── 08 เฟสตรงข้าม ─────────────────────────────────────────────────────────
-    st.markdown('<hr class="div"><p class="sh"><span class="pill">08</span>กรณีพิเศษ: แหล่งกำเนิดเฟสตรงข้าม</p>',
+    # ─────────────────────────────────────────────────────────────────────────
+    # 08  ANTI-PHASE SOURCES
+    # ─────────────────────────────────────────────────────────────────────────
+    st.markdown('<hr class="div"><p class="sh"><span class="pill">08</span>'
+                'Special Case: Anti-Phase Sources (&Delta;&phi; = 180&deg;)</p>',
                 unsafe_allow_html=True)
 
     _show(_fig_antiphase_waves,
-          "ซ้าย: แหล่งกำเนิดเฟสตรงกัน → ปฏิบัพ (ผิวน้ำสูง 2A) &nbsp;|&nbsp; "
-          "ขวา: แหล่งกำเนิดเฟสตรงข้าม → บัพ (ผิวน้ำนิ่ง)")
+          "Left: in-phase sources &rarr; antinode (amplitude 2A) at &Delta;r = 0 &nbsp;|&nbsp; "
+          "Right: anti-phase sources &rarr; node (amplitude 0) at &Delta;r = 0")
 
     c1, c2 = st.columns(2, gap="large")
     with c1:
         st.markdown("""
 <div class="card cr">
-<h4>เงื่อนไขสลับกันทั้งหมด!</h4>
-<p>เมื่อแหล่งกำเนิดเฟสต่างกัน 180°
-เงื่อนไขปฏิบัพ-บัพ <strong>สลับกันทั้งหมด</strong></p>
+<h4>All Conditions Swap!</h4>
+<p>When sources are 180&deg; out of phase, the antinode/node conditions
+<strong>reverse completely</strong>.</p>
 </div>
 """, unsafe_allow_html=True)
         st.markdown("""
 <table class="rt">
-<thead><tr><th>Δr</th><th>เฟสตรงกัน</th><th>เฟสตรงข้าม</th></tr></thead>
+<thead><tr><th>&Delta;r</th><th>In-phase sources</th><th>Anti-phase sources</th></tr></thead>
 <tbody>
-<tr><td>0, λ, 2λ, …</td>
-    <td class="tg">ปฏิบัพ</td>
-    <td class="tr">บัพ</td></tr>
-<tr><td>λ/2, 3λ/2, …</td>
-    <td class="tr">บัพ</td>
-    <td class="tg">ปฏิบัพ</td></tr>
+<tr><td>0, &lambda;, 2&lambda;, &hellip;</td>
+    <td class="tg">Antinode</td>
+    <td class="tr">Node</td></tr>
+<tr><td>&lambda;/2, 3&lambda;/2, &hellip;</td>
+    <td class="tr">Node</td>
+    <td class="tg">Antinode</td></tr>
 </tbody>
 </table>
 """, unsafe_allow_html=True)
     with c2:
         st.markdown("""
-<div class="card cy" style="margin-top:10px">
-<h4>เหตุผล</h4>
-<p>เฟสตรงข้าม → มีเฟสต่าง 180° อยู่ก่อนแล้ว<br>
-Δr = 0 → เพิ่ม 0° รวม = 180° → <strong class="tr">บัพ</strong><br>
-Δr = λ/2 → เพิ่ม 180° รวม = 360° = 0° → <strong class="tg">ปฏิบัพ</strong></p>
+<div class="card cy">
+<h4>Why?</h4>
+<p>Anti-phase sources already have a built-in 180&deg; phase difference.<br>
+&Delta;r = 0 &rarr; adds 0&deg; &rarr; total = 180&deg;
+&rarr; <strong class="tr">Node</strong><br>
+&Delta;r = &lambda;/2 &rarr; adds 180&deg; &rarr; total = 360&deg; = 0&deg;
+&rarr; <strong class="tg">Antinode</strong></p>
 </div>
 """, unsafe_allow_html=True)
 
-    # ── 09 ช่องเปิดคู่ ────────────────────────────────────────────────────────
-    st.markdown('<hr class="div"><p class="sh"><span class="pill">09</span>คลื่นน้ำผ่านช่องเปิดคู่ในแผ่นกั้น</p>',
+    # ─────────────────────────────────────────────────────────────────────────
+    # 09  TWO OPENINGS IN A BARRIER
+    # ─────────────────────────────────────────────────────────────────────────
+    st.markdown('<hr class="div"><p class="sh"><span class="pill">09</span>'
+                'Water Wave Through Two Openings in a Barrier</p>',
                 unsafe_allow_html=True)
 
     _show(_fig_barrier,
-          "คลื่นระนาบผ่านช่องเปิด O₁ O₂ แผ่เป็นคลื่นวงกลม เกิด interference ทางด้านขวา")
+          "Plane wave passes through openings O&#x2081; and O&#x2082;, "
+          "diffracts into circular waves, and produces an interference pattern to the right.")
 
     c1, c2 = st.columns(2, gap="large")
     with c1:
-        st.markdown("**มุมแนวปฏิบัพที่ n:**")
+        st.markdown("**Antinodal angle at order n:**")
         st.latex(r"\sin\theta_n = \frac{n\lambda}{d}")
-        st.markdown("**ระยะวัดจากแกนกลาง (θ เล็ก):**")
+        st.markdown("**Distance from centre line (small-angle approx.):**")
         st.latex(r"x_n = \frac{n\lambda L}{d}")
-        st.markdown("**ระยะห่างระหว่างแนวปฏิบัพติดกัน:**")
+        st.markdown("**Spacing between adjacent antinodal lines:**")
         st.latex(r"\Delta x = \frac{\lambda L}{d}")
     with c2:
         st.markdown("""
 <div class="card cg">
-<h4>ตัวอย่าง  (จาก Q50)</h4>
-<p>d = 4 cm, λ = 2 cm, L = 30 cm</p>
+<h4>Worked Example &nbsp;(Q50)</h4>
+<p>d = 4 cm, &lambda; = 2 cm, L = 30 cm</p>
 <ul>
-<li>x₁ = (1 × 2 × 30) / 4 = <strong>15 cm</strong></li>
-<li>x₂ = (2 × 2 × 30) / 4 = <strong>30 cm</strong></li>
-<li>Δx = (2 × 30) / 4 = <strong>15 cm</strong></li>
+<li>x&#x2081; = (1 &times; 2 &times; 30) / 4 = <strong>15 cm</strong></li>
+<li>x&#x2082; = (2 &times; 2 &times; 30) / 4 = <strong>30 cm</strong></li>
+<li>&Delta;x = (2 &times; 30) / 4 = <strong>15 cm</strong></li>
 </ul>
 </div>
 <div class="card cr" style="margin-top:10px">
-<h4>มุมแนวบัพที่ n:</h4>
+<h4>Nodal angle at order n:</h4>
 </div>
 """, unsafe_allow_html=True)
         st.latex(r"\sin\theta_n = \frac{(n-\tfrac{1}{2})\lambda}{d}")
 
-    # ── ตารางสรุป ─────────────────────────────────────────────────────────────
-    st.markdown('<hr class="div"><p class="sh"><span class="pill">สรุป</span>ตารางสูตรครบ</p>',
+    # ─────────────────────────────────────────────────────────────────────────
+    # REFERENCE TABLE
+    # ─────────────────────────────────────────────────────────────────────────
+    st.markdown('<hr class="div"><p class="sh"><span class="pill">REF</span>'
+                'Complete Formula Reference</p>',
                 unsafe_allow_html=True)
 
     st.markdown("""
 <table class="rt">
 <thead><tr>
-  <th>หัวข้อ</th>
-  <th>ปฏิบัพ (Constructive)</th>
-  <th>บัพ (Destructive)</th>
+  <th>Quantity</th>
+  <th>Antinode (Constructive)</th>
+  <th>Node (Destructive)</th>
 </tr></thead>
 <tbody>
-<tr><td><strong>เงื่อนไข Δr (เฟสตรงกัน)</strong></td>
-    <td class="tg">Δr = 0, λ, 2λ, …</td>
-    <td class="tr">Δr = λ/2, 3λ/2, …</td></tr>
-<tr><td><strong>เงื่อนไข Δr (เฟสตรงข้าม)</strong></td>
-    <td class="tg">Δr = λ/2, 3λ/2, …</td>
-    <td class="tr">Δr = 0, λ, 2λ, …</td></tr>
-<tr><td><strong>จำนวนแนวปฏิบัพ</strong></td>
-    <td class="tg">2n<sub>max</sub> + 1</td><td>—</td></tr>
-<tr><td><strong>จำนวนแนวบัพ</strong></td>
-    <td>—</td><td class="tr">2n<sub>max</sub></td></tr>
-<tr><td><strong>มุมแนวปฏิบัพ</strong></td>
-    <td class="tg">sin θ = nλ/d</td>
-    <td class="tr">sin θ = (n−½)λ/d</td></tr>
-<tr><td><strong>ระยะบนฉาก (θ เล็ก)</strong></td>
-    <td class="tg">x = nλL/d</td>
-    <td class="tr">x = (n−½)λL/d</td></tr>
-<tr><td><strong>แอมพลิจูดผลลัพธ์</strong></td>
+<tr><td><strong>&Delta;r condition (in-phase sources)</strong></td>
+    <td class="tg">&Delta;r = 0, &lambda;, 2&lambda;, &hellip;</td>
+    <td class="tr">&Delta;r = &lambda;/2, 3&lambda;/2, &hellip;</td></tr>
+<tr><td><strong>&Delta;r condition (anti-phase sources)</strong></td>
+    <td class="tg">&Delta;r = &lambda;/2, 3&lambda;/2, &hellip;</td>
+    <td class="tr">&Delta;r = 0, &lambda;, 2&lambda;, &hellip;</td></tr>
+<tr><td><strong>No. of lines (in-phase)</strong></td>
+    <td class="tg">2n<sub>max</sub> + 1</td>
+    <td class="tr">2n<sub>max</sub></td></tr>
+<tr><td><strong>Angle of n-th line</strong></td>
+    <td class="tg">sin &theta; = n&lambda;/d</td>
+    <td class="tr">sin &theta; = (n&minus;&frac12;)&lambda;/d</td></tr>
+<tr><td><strong>Distance on screen (small &theta;)</strong></td>
+    <td class="tg">x = n&lambda;L/d</td>
+    <td class="tr">x = (n&minus;&frac12;)&lambda;L/d</td></tr>
+<tr><td><strong>Resultant amplitude</strong></td>
     <td class="tg">2A</td>
     <td class="tr">0</td></tr>
 </tbody>
@@ -1633,5 +1681,7 @@ def render_summary():
 """, unsafe_allow_html=True)
 
     st.info(
-        "**เคล็ดลับ:** ทุกโจทย์ → หา Δr → หาร λ → ได้จำนวนเต็ม = ปฏิบัพ / ลงท้าย .5 = บัพ"
+        "**Key tip:** For every interference problem: "
+        "find Δr → divide by λ → "
+        "integer result = **Antinode** / result ending in .5 = **Node**"
     )
