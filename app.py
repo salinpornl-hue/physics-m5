@@ -3,6 +3,7 @@ from visuals import get_plot_for_question
 from answers import ANSWERS
 from answer_keys import ANSWER_KEYS, check_answer
 from summary import render_summary
+from pdf_export import generate_problems_pdf
 
 st.set_page_config(
     page_title="ฟิสิกส์: คลื่นกล",
