@@ -1,6 +1,6 @@
 """
-summary.py — สรุปเรื่อง "การแทรกสอดของคลื่น" แบบเข้าใจง่าย
-แสดงผ่าน st.markdown + matplotlib figures
+summary.py — สรุปเรื่อง "การแทรกสอดของคลื่น"
+Thai text stays in Streamlit markdown. Matplotlib figures use English only.
 """
 import streamlit as st
 import numpy as np
@@ -8,636 +8,705 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
-from matplotlib.patches import FancyArrowPatch
+
+# ── Try to use a Thai-compatible font for matplotlib ──────────────────────────
+import matplotlib.font_manager as fm
+
+_THAI_CANDIDATES = ['Tahoma', 'Arial Unicode MS', 'Browallia New',
+                    'AngsanaUPC', 'Cordia New', 'FreeSans', 'DejaVu Sans']
+_available = {f.name for f in fm.fontManager.ttflist}
+_thai_font = next((f for f in _THAI_CANDIDATES if f in _available), 'DejaVu Sans')
+plt.rcParams['font.family'] = _thai_font
+plt.rcParams['axes.unicode_minus'] = False
 
 
-# ─── helpers ──────────────────────────────────────────────────────────────────
+# ─── CSS ──────────────────────────────────────────────────────────────────────
+_CSS = """
+<style>
+.s-title  { font-size:2.1rem; font-weight:900; color:#1e3a8a;
+            text-align:center; margin-bottom:2px; }
+.s-sub    { font-size:1rem; color:#64748b; text-align:center; margin-bottom:20px; }
+.s-h2     { font-size:1.4rem; font-weight:800; color:#1e3a8a; margin:8px 0 4px 0; }
+.box-blue { background:#eff6ff; border-left:5px solid #2563eb;
+            border-radius:8px; padding:14px 18px; margin:10px 0; }
+.box-blue h4 { margin:0 0 6px 0; color:#1e40af; }
+.box-green{ background:#f0fdf4; border:1px solid #86efac;
+            border-radius:8px; padding:14px 18px; margin:10px 0; }
+.box-warn { background:#fffbeb; border-left:5px solid #f59e0b;
+            border-radius:8px; padding:12px 16px; margin:10px 0; }
+.box-red  { background:#fef2f2; border-left:5px solid #dc2626;
+            border-radius:8px; padding:14px 18px; margin:10px 0; }
+.box-red h4 { margin:0 0 6px 0; color:#991b1b; }
+</style>
+"""
 
-def _fig(func):
-    """Call func() → return fig safely."""
-    try:
-        return func()
-    except Exception as e:
-        st.warning(f"[รูปไม่แสดง: {e}]")
-        return None
 
+# ─── Figure helpers ───────────────────────────────────────────────────────────
 
 def _show(func, caption=""):
-    fig = _fig(func)
-    if fig:
+    try:
+        fig = func()
         st.pyplot(fig, use_container_width=True)
         if caption:
             st.caption(caption)
         plt.close(fig)
+    except Exception as e:
+        st.warning(f"ไม่สามารถแสดงรูปได้: {e}")
 
 
-# ─── figures ──────────────────────────────────────────────────────────────────
+# ─── Figures (English labels only) ───────────────────────────────────────────
 
 def _fig_ripple():
-    """Two circular wave sources, ripple pattern."""
-    fig, ax = plt.subplots(figsize=(8, 5))
+    fig, ax = plt.subplots(figsize=(8, 4.5))
     ax.set_xlim(-8, 8); ax.set_ylim(-5, 5)
     ax.set_aspect('equal'); ax.axis('off')
+    ax.set_facecolor('#f0f9ff')
+    fig.patch.set_facecolor('#f0f9ff')
 
     lam = 2.0
-    s1, s2 = np.array([-2.5, 0.0]), np.array([2.5, 0.0])
-
-    for src, col in [(s1, '#2563eb'), (s2, '#dc2626')]:
+    sources = [(-2.5, 0.0, '#2563eb', 'S₁'), (2.5, 0.0, '#dc2626', 'S₂')]
+    for sx, sy, col, lbl in sources:
         for r in np.arange(lam/2, 9, lam/2):
-            circle = plt.Circle(src, r, color=col, fill=False,
-                                lw=1.0, alpha=max(0.1, 1-r/9))
-            ax.add_patch(circle)
-        ax.plot(*src, 'o', color=col, ms=8, zorder=5)
+            alpha = max(0.08, 0.7 - r/9)
+            c = plt.Circle((sx, sy), r, color=col, fill=False, lw=1.2, alpha=alpha)
+            ax.add_patch(c)
+        ax.plot(sx, sy, 'o', color=col, ms=10, zorder=5)
+        ax.text(sx, sy - 0.7, lbl, ha='center', fontsize=14,
+                color=col, fontweight='bold')
 
-    ax.text(-2.5, -0.5, '$S_1$', ha='center', fontsize=13, color='#2563eb', fontweight='bold')
-    ax.text( 2.5, -0.5, '$S_2$', ha='center', fontsize=13, color='#dc2626', fontweight='bold')
-    ax.set_title('คลื่นจากแหล่งกำเนิด 2 แหล่งแผ่ออกมาพบกัน', fontsize=12)
+    ax.text(0, 4.3, 'Two wave sources radiating outward',
+            ha='center', fontsize=11, color='#374151',
+            bbox=dict(boxstyle='round,pad=0.3', fc='white', ec='#cbd5e1', lw=1))
     fig.tight_layout()
     return fig
 
 
 def _fig_constructive():
-    """Two waves adding up — constructive."""
     fig, axes = plt.subplots(3, 1, figsize=(9, 5), sharex=True)
-    x = np.linspace(0, 4*np.pi, 400)
-    A = 1.0
-    y1 = A * np.sin(x)
-    y2 = A * np.sin(x)
-    ysum = y1 + y2
+    fig.patch.set_facecolor('#f0fdf4')
+    x = np.linspace(0, 4*np.pi, 500)
 
-    axes[0].plot(x, y1, '#2563eb', lw=2)
-    axes[0].axhline(0, color='k', lw=0.6)
-    axes[0].set_ylabel('คลื่น 1', fontsize=10)
-    axes[0].set_ylim(-2.5, 2.5); axes[0].set_yticks([])
+    data = [
+        (np.sin(x),       '#2563eb', 'Wave 1'),
+        (np.sin(x),       '#dc2626', 'Wave 2  (same phase)'),
+        (2*np.sin(x),     '#16a34a', 'Result  =  Wave 1 + Wave 2'),
+    ]
+    for ax, (y, col, lbl) in zip(axes, data):
+        ax.fill_between(x, y, alpha=0.18, color=col)
+        ax.plot(x, y, color=col, lw=2.2)
+        ax.axhline(0, color='k', lw=0.6)
+        ax.set_ylabel(lbl, fontsize=9, color=col, fontweight='bold')
+        ax.set_ylim(-2.5, 2.5); ax.set_yticks([])
+        ax.spines[['top','right','bottom','left']].set_visible(False)
 
-    axes[1].plot(x, y2, '#dc2626', lw=2)
-    axes[1].axhline(0, color='k', lw=0.6)
-    axes[1].set_ylabel('คลื่น 2', fontsize=10)
-    axes[1].set_ylim(-2.5, 2.5); axes[1].set_yticks([])
-
-    axes[2].fill_between(x, ysum, alpha=0.25, color='#16a34a')
-    axes[2].plot(x, ysum, '#16a34a', lw=3)
-    axes[2].axhline(0, color='k', lw=0.6)
-    axes[2].set_ylabel('ผลรวม', fontsize=10)
-    axes[2].set_ylim(-2.5, 2.5); axes[2].set_yticks([-2, 0, 2])
-    axes[2].set_xlabel('ตำแหน่ง', fontsize=10)
-
-    axes[2].annotate('แอมพลิจูดเป็น 2 เท่า!', xy=(np.pi/2, 2), xytext=(np.pi/2+2, 2.2),
-                     arrowprops=dict(arrowstyle='->', color='green', lw=1.5),
-                     fontsize=10, color='green', fontweight='bold')
-
-    fig.suptitle('การแทรกสอดแบบเสริมกัน (Constructive) 🟢', fontsize=13, fontweight='bold', color='#16a34a')
+    axes[2].annotate('Amplitude = 2A  (maximum!)',
+                     xy=(np.pi/2, 2), xytext=(np.pi/2 + 2.5, 2.3),
+                     arrowprops=dict(arrowstyle='->', color='#16a34a', lw=1.8),
+                     fontsize=10, color='#16a34a', fontweight='bold')
+    axes[2].set_xlabel('Position  x', fontsize=10)
+    fig.suptitle('CONSTRUCTIVE Interference  —  crests meet crests',
+                 fontsize=12, fontweight='bold', color='#16a34a', y=1.01)
     fig.tight_layout()
     return fig
 
 
 def _fig_destructive():
-    """Two waves cancelling — destructive."""
     fig, axes = plt.subplots(3, 1, figsize=(9, 5), sharex=True)
-    x = np.linspace(0, 4*np.pi, 400)
-    A = 1.0
-    y1 =  A * np.sin(x)
-    y2 = -A * np.sin(x)   # phase diff = π
-    ysum = y1 + y2
+    fig.patch.set_facecolor('#fef2f2')
+    x = np.linspace(0, 4*np.pi, 500)
 
-    axes[0].plot(x, y1, '#2563eb', lw=2)
-    axes[0].axhline(0, color='k', lw=0.6)
-    axes[0].set_ylabel('คลื่น 1', fontsize=10)
-    axes[0].set_ylim(-2.5, 2.5); axes[0].set_yticks([])
+    data = [
+        (np.sin(x),        '#2563eb', 'Wave 1'),
+        (-np.sin(x),       '#dc2626', 'Wave 2  (opposite phase)'),
+        (np.zeros_like(x), '#6b7280', 'Result  =  0  (cancelled out!)'),
+    ]
+    for ax, (y, col, lbl) in zip(axes, data):
+        ax.fill_between(x, y, alpha=0.18, color=col)
+        ax.plot(x, y, color=col, lw=2.2)
+        ax.axhline(0, color='k', lw=0.6)
+        ax.set_ylabel(lbl, fontsize=9, color=col, fontweight='bold')
+        ax.set_ylim(-2.5, 2.5); ax.set_yticks([])
+        ax.spines[['top','right','bottom','left']].set_visible(False)
 
-    axes[1].plot(x, y2, '#dc2626', lw=2)
-    axes[1].axhline(0, color='k', lw=0.6)
-    axes[1].set_ylabel('คลื่น 2', fontsize=10)
-    axes[1].set_ylim(-2.5, 2.5); axes[1].set_yticks([])
-    axes[1].annotate('(เฟสตรงข้ามกัน)', (np.pi, -1), fontsize=9,
-                     color='#dc2626', ha='center', xytext=(np.pi, -2.2),
-                     arrowprops=dict(arrowstyle='->', color='#dc2626', lw=1))
-
-    axes[2].fill_between(x, ysum, alpha=0.25, color='#6b7280')
-    axes[2].plot(x, ysum, '#6b7280', lw=3)
-    axes[2].axhline(0, color='k', lw=1.5, ls='--')
-    axes[2].set_ylabel('ผลรวม = 0', fontsize=10)
-    axes[2].set_ylim(-2.5, 2.5); axes[2].set_yticks([-2, 0, 2])
-    axes[2].set_xlabel('ตำแหน่ง', fontsize=10)
-    axes[2].text(2*np.pi, 0.3, 'หักล้างกันหมด!', fontsize=11,
-                 color='gray', fontweight='bold', ha='center')
-
-    fig.suptitle('การแทรกสอดแบบหักล้างกัน (Destructive) 🔴', fontsize=13, fontweight='bold', color='#dc2626')
+    axes[2].set_xlabel('Position  x', fontsize=10)
+    fig.suptitle('DESTRUCTIVE Interference  —  crests meet troughs',
+                 fontsize=12, fontweight='bold', color='#dc2626', y=1.01)
     fig.tight_layout()
     return fig
 
 
 def _fig_path_diff():
-    """Path difference diagram — two sources S1 S2, point P."""
-    fig, ax = plt.subplots(figsize=(7, 5))
-    ax.set_xlim(-1, 9); ax.set_ylim(-1, 6)
+    fig, ax = plt.subplots(figsize=(7, 4.8))
+    ax.set_xlim(-1, 9.5); ax.set_ylim(-0.5, 5.5)
     ax.set_aspect('equal'); ax.axis('off')
+    fig.patch.set_facecolor('#fefce8')
+    ax.set_facecolor('#fefce8')
 
-    s1 = np.array([0.0, 4.0])
-    s2 = np.array([0.0, 0.0])
-    P  = np.array([7.0, 2.5])
+    s1 = np.array([0.0, 4.2])
+    s2 = np.array([0.0, 0.5])
+    P  = np.array([7.5, 2.8])
 
-    # draw sources
-    ax.plot(*s1, 'o', color='#2563eb', ms=12, zorder=5)
-    ax.plot(*s2, 'o', color='#dc2626', ms=12, zorder=5)
-    ax.text(s1[0]-0.4, s1[1], '$S_1$', ha='right', fontsize=14,
-            color='#2563eb', fontweight='bold')
-    ax.text(s2[0]-0.4, s2[1], '$S_2$', ha='right', fontsize=14,
-            color='#dc2626', fontweight='bold')
+    for src, col, lbl in [(s1,'#2563eb','S₁'), (s2,'#dc2626','S₂')]:
+        ax.plot(*src, 'o', color=col, ms=13, zorder=5)
+        ax.text(src[0]-0.35, src[1], lbl, ha='right', fontsize=14,
+                color=col, fontweight='bold')
 
-    # draw P
-    ax.plot(*P, '^', color='#16a34a', ms=12, zorder=5)
+    ax.plot(*P, '^', color='#16a34a', ms=13, zorder=5)
     ax.text(P[0]+0.2, P[1]+0.15, 'P', fontsize=14,
             color='#16a34a', fontweight='bold')
 
-    # lines
-    ax.plot([s1[0], P[0]], [s1[1], P[1]], '#2563eb', lw=2, ls='--')
-    ax.plot([s2[0], P[0]], [s2[1], P[1]], '#dc2626', lw=2, ls='--')
-
-    # distance labels
-    mid1 = (s1 + P) / 2
-    mid2 = (s2 + P) / 2
     r1 = np.linalg.norm(P - s1)
     r2 = np.linalg.norm(P - s2)
-    ax.text(mid1[0]-0.3, mid1[1]+0.25, f'$r_1={r1:.1f}$', fontsize=11,
-            color='#2563eb', rotation=np.degrees(np.arctan2(P[1]-s1[1], P[0]-s1[0])))
-    ax.text(mid2[0]+0.1, mid2[1]-0.35, f'$r_2={r2:.1f}$', fontsize=11,
-            color='#dc2626', rotation=np.degrees(np.arctan2(P[1]-s2[1], P[0]-s2[0])))
+    ax.plot([s1[0], P[0]], [s1[1], P[1]], '#2563eb', lw=2, ls='--', alpha=0.8)
+    ax.plot([s2[0], P[0]], [s2[1], P[1]], '#dc2626', lw=2, ls='--', alpha=0.8)
+
+    mid1 = (s1 + P) / 2
+    mid2 = (s2 + P) / 2
+    ang1 = np.degrees(np.arctan2(P[1]-s1[1], P[0]-s1[0]))
+    ang2 = np.degrees(np.arctan2(P[1]-s2[1], P[0]-s2[0]))
+    ax.text(mid1[0]-0.2, mid1[1]+0.25, f'r₁ = {r1:.1f}',
+            fontsize=10, color='#2563eb', rotation=ang1, ha='center')
+    ax.text(mid2[0]+0.2, mid2[1]-0.35, f'r₂ = {r2:.1f}',
+            fontsize=10, color='#dc2626', rotation=ang2, ha='center')
 
     dr = abs(r2 - r1)
     ax.text(4.5, 5.2,
-            f'ผลต่างระยะทาง  $\\Delta r = |r_2 - r_1| = {dr:.1f}$',
-            fontsize=12, ha='center',
-            bbox=dict(boxstyle='round,pad=0.4', fc='#fef3c7', ec='orange', lw=1.5))
+            f'Δr  =  |r₂ − r₁|  =  {dr:.1f}  cm',
+            fontsize=12, ha='center', fontweight='bold', color='#92400e',
+            bbox=dict(boxstyle='round,pad=0.4', fc='#fef3c7', ec='#f59e0b', lw=2))
 
-    fig.suptitle('ผลต่างระยะทาง (Path Difference) คือหัวใจสำคัญ!', fontsize=12, fontweight='bold')
+    ax.text(4.5, -0.3, 'PATH DIFFERENCE  determines  constructive or destructive',
+            ha='center', fontsize=9, color='#6b7280', style='italic')
     fig.tight_layout()
     return fig
 
 
-def _fig_interference_pattern():
-    """Full interference pattern with labeled antinodal/nodal lines."""
-    fig, ax = plt.subplots(figsize=(9, 6))
-    d, lam = 10.0, 2.5
-    n_max = int(d / lam)   # = 4
+def _fig_formula_summary():
+    fig, axes = plt.subplots(1, 2, figsize=(10, 3.5))
+    fig.patch.set_facecolor('#f8fafc')
 
-    s1 = np.array([0.0,  d/2])
-    s2 = np.array([0.0, -d/2])
-    ax.plot(*s1, 'o', color='#2563eb', ms=10, zorder=5)
-    ax.plot(*s2, 's', color='#dc2626', ms=10, zorder=5)
-    ax.text(s1[0]-0.5, s1[1], '$S_1$', ha='right', fontsize=12, color='#2563eb', fontweight='bold')
-    ax.text(s2[0]-0.5, s2[1], '$S_2$', ha='right', fontsize=12, color='#dc2626', fontweight='bold')
+    configs = [
+        ('#16a34a', '#dcfce7', 'CONSTRUCTIVE (Antinode)',
+         [r'$\Delta r = n\lambda$',
+          r'$n = 0,\,1,\,2,\,3,\,\ldots$',
+          '',
+          'Amplitude = 2A  (MAX)'],
+        ),
+        ('#dc2626', '#fee2e2', 'DESTRUCTIVE (Node)',
+         [r'$\Delta r = \left(n-\tfrac{1}{2}\right)\lambda$',
+          r'$n = 1,\,2,\,3,\,\ldots$',
+          '',
+          'Amplitude = 0  (MIN)'],
+        ),
+    ]
+
+    for ax, (col, fc, title, lines) in zip(axes, configs):
+        ax.set_xlim(0,1); ax.set_ylim(0,1); ax.axis('off')
+        ax.set_facecolor(fc)
+        rect = mpatches.FancyBboxPatch((0.02, 0.02), 0.96, 0.96,
+                                       boxstyle='round,pad=0.02',
+                                       fc=fc, ec=col, lw=2.5,
+                                       transform=ax.transAxes, clip_on=False)
+        ax.add_patch(rect)
+        ax.text(0.5, 0.90, title, transform=ax.transAxes,
+                ha='center', va='top', fontsize=11.5, fontweight='bold', color=col)
+        for k, line in enumerate(lines):
+            ax.text(0.5, 0.72 - k*0.15, line, transform=ax.transAxes,
+                    ha='center', va='top', fontsize=11)
+
+    fig.suptitle('Interference Conditions  (in-phase sources)',
+                 fontsize=12, fontweight='bold', y=1.02)
+    fig.tight_layout()
+    return fig
+
+
+def _fig_pattern():
+    fig, ax = plt.subplots(figsize=(9, 5.5))
+    fig.patch.set_facecolor('#f8fafc')
+    d, lam = 10.0, 2.5
+    n_max = int(d / lam)
+    s1, s2 = np.array([0.0,  d/2]), np.array([0.0, -d/2])
+
+    for src, col, lbl in [(s1,'#2563eb','S₁'),(s2,'#dc2626','S₂')]:
+        ax.plot(*src, 'o', color=col, ms=10, zorder=5)
+        ax.text(src[0]-0.4, src[1], lbl, ha='right', fontsize=11,
+                color=col, fontweight='bold')
 
     r_max = 28
-
-    # Antinodal lines (constructive)
     for n in range(-n_max, n_max+1):
         val = n * lam / d
         if abs(val) <= 1:
             th = np.arcsin(val)
-            xe, ye = r_max*np.cos(th), r_max*np.sin(th)
-            ax.plot([0, xe], [0, ye], '#16a34a', lw=2.0, alpha=0.85)
-            label = f'A{abs(n)}' if n != 0 else 'A₀\n(กลาง)'
-            ax.text(xe*1.05, ye*1.05, label, fontsize=8,
-                    color='#16a34a', ha='center', fontweight='bold')
+            ax.plot([0, r_max*np.cos(th)], [0, r_max*np.sin(th)],
+                    '#16a34a', lw=2.2, alpha=0.85, zorder=3)
+            lbl = f'A{abs(n)}' if n != 0 else 'A₀'
+            ax.text(r_max*np.cos(th)*1.05, r_max*np.sin(th)*1.05,
+                    lbl, fontsize=8.5, color='#16a34a',
+                    ha='center', fontweight='bold')
 
-    # Nodal lines (destructive)
     for n in range(1, n_max+1):
         for sign in [1, -1]:
             val = (n - 0.5) * lam / d
             if abs(val) <= 1:
                 th = np.arcsin(sign * val)
-                xe, ye = r_max*np.cos(th), r_max*np.sin(th)
-                ax.plot([0, xe], [0, ye], '#dc2626', lw=1.2,
-                        ls='--', alpha=0.7)
-                ax.text(xe*1.05, ye*1.05, f'N{n}', fontsize=8,
-                        color='#dc2626', ha='center')
+                ax.plot([0, r_max*np.cos(th)], [0, r_max*np.sin(th)],
+                        '#dc2626', lw=1.3, ls='--', alpha=0.7, zorder=2)
+                ax.text(r_max*np.cos(th)*1.05, r_max*np.sin(th)*1.05,
+                        f'N{n}', fontsize=8, color='#dc2626', ha='center')
 
-    # Legend patches
-    anti = mpatches.Patch(color='#16a34a', label='แนวปฏิบัพ (เสริมกัน)')
-    node = mpatches.Patch(color='#dc2626', label='แนวบัพ (หักล้างกัน)', linestyle='--', fill=False,
-                          edgecolor='#dc2626')
-    ax.legend(handles=[anti, node], loc='lower right', fontsize=10)
-
-    ax.set_xlim(-3, 31); ax.set_ylim(-12, 12)
-    ax.set_xlabel('ระยะห่างจากแหล่งกำเนิด (cm)', fontsize=10)
-    ax.set_title('รูปแบบการแทรกสอด: d=10cm, λ=2.5cm\n'
-                 '(เส้นสีเขียว=ปฏิบัพ, เส้นประสีแดง=บัพ)', fontsize=11)
+    anti_p = mpatches.Patch(color='#16a34a', label='Antinodal lines (constructive)')
+    node_p = mpatches.Patch(color='#dc2626', label='Nodal lines (destructive)',
+                             fill=False, linestyle='--', edgecolor='#dc2626')
+    ax.legend(handles=[anti_p, node_p], loc='lower right', fontsize=9.5)
+    ax.set_xlim(-3, 32); ax.set_ylim(-12.5, 12.5)
+    ax.set_xlabel('x  (cm)', fontsize=10)
+    ax.set_title(f'd = {int(d)} cm,  λ = {lam} cm\n'
+                 f'Antinodal lines = {2*n_max+1},  Nodal lines = {2*n_max}',
+                 fontsize=10)
     ax.axhline(0, color='gray', lw=0.5, ls=':')
+    ax.set_facecolor('#f8fafc')
     fig.tight_layout()
     return fig
 
 
-def _fig_node_count():
-    """Visual guide for counting antinodes/nodes on S1S2 line."""
-    fig, ax = plt.subplots(figsize=(9, 3))
-    ax.set_xlim(-0.5, 11); ax.set_ylim(-1.5, 2)
+def _fig_steps():
+    """3-step method diagram."""
+    fig, ax = plt.subplots(figsize=(9, 2.8))
     ax.axis('off')
-
-    d, lam = 10.0, 2.0
-    n0 = int(d / lam)   # 5
-
-    # S1 at x=0, S2 at x=10
-    ax.plot(0,  0, 'o', color='#2563eb', ms=14, zorder=5)
-    ax.plot(10, 0, 's', color='#dc2626', ms=14, zorder=5)
-    ax.text(0,  -0.55, '$S_1$', ha='center', fontsize=12, color='#2563eb', fontweight='bold')
-    ax.text(10, -0.55, '$S_2$', ha='right',  fontsize=12, color='#dc2626', fontweight='bold')
-
-    # line
-    ax.plot([0, 10], [0, 0], 'k-', lw=2)
-
-    # Antinodes: Δr = 0,2,4,6,8,10  → x positions
-    antinodes_x = [5, 4, 6, 3, 7, 2, 8, 1, 9, 0, 10]
-    dr_vals      = [0, 2, 2, 4, 4, 6, 6, 8, 8, 10, 10]
-    for x, dr in zip(antinodes_x, dr_vals):
-        ax.plot(x, 0, 'D', color='#16a34a', ms=10, zorder=6)
-        ax.text(x, 0.55, f'Δr={dr}', ha='center', fontsize=7.5,
-                color='#16a34a', fontweight='bold')
-
-    # Nodes: Δr = 1,3,5,7,9
-    for dr in [1, 3, 5, 7, 9]:
-        for x in [(10+dr)/2, (10-dr)/2]:
-            ax.plot(x, 0, 'v', color='#dc2626', ms=9, zorder=6)
-            ax.text(x, -1.05, f'Δr={dr}', ha='center', fontsize=7.5, color='#dc2626')
-
-    ax.text(5, 1.6,
-            f'd={int(d)} cm, λ={int(lam)} cm  →  นับ Δr/λ: จำนวนเต็ม=ปฏิบัพ ■, ทศนิยม .5=บัพ ▼',
-            ha='center', fontsize=9,
-            bbox=dict(boxstyle='round,pad=0.3', fc='#fffbeb', ec='orange'))
-
-    fig.tight_layout()
-    return fig
-
-
-def _fig_formula_card():
-    """Visual formula summary card."""
-    fig, ax = plt.subplots(figsize=(9, 4.5))
-    ax.axis('off')
-
-    # Two boxes side by side
-    for xc, color, fc, title, lines in [
-        (0.25, '#16a34a', '#dcfce7',
-         '✅ เสริมกัน (ปฏิบัพ)',
-         [r'$\Delta r = 0,\ \lambda,\ 2\lambda,\ 3\lambda,\ \ldots$',
-          r'$\Delta r = n\lambda \quad (n = 0,1,2,\ldots)$',
-          '',
-          r'เฟสตรงกัน → ยอดชนยอด',
-          r'แอมพลิจูด = $2A$ (สูงสุด)']),
-        (0.75, '#dc2626', '#fee2e2',
-         '❌ หักล้างกัน (บัพ)',
-         [r'$\Delta r = \tfrac{\lambda}{2},\ \tfrac{3\lambda}{2},\ \tfrac{5\lambda}{2},\ \ldots$',
-          r'$\Delta r = (n-\tfrac{1}{2})\lambda \quad (n = 1,2,\ldots)$',
-          '',
-          r'เฟสตรงข้าม → ยอดชนราง',
-          r'แอมพลิจูด = $0$ (เป็นศูนย์)']),
-    ]:
-        rect = mpatches.FancyBboxPatch((xc-0.22, 0.05), 0.44, 0.9,
-                                       boxstyle='round,pad=0.02',
-                                       fc=fc, ec=color, lw=2,
-                                       transform=ax.transAxes, clip_on=False)
-        ax.add_patch(rect)
-        ax.text(xc, 0.88, title, transform=ax.transAxes,
-                ha='center', va='top', fontsize=12, fontweight='bold', color=color)
-        for i, line in enumerate(lines):
-            ax.text(xc, 0.75 - i*0.13, line, transform=ax.transAxes,
-                    ha='center', va='top', fontsize=10.5)
-
-    ax.text(0.5, 0.98, '📋 สรุปสูตร: เงื่อนไขการแทรกสอด (เฟสตรงกัน)',
-            transform=ax.transAxes, ha='center', va='top',
-            fontsize=13, fontweight='bold')
-    fig.tight_layout()
-    return fig
-
-
-def _fig_mnemonic():
-    """Simple mnemonic: divide Δr by λ → integer=antinode, half=node."""
-    fig, ax = plt.subplots(figsize=(8, 3))
-    ax.axis('off')
+    fig.patch.set_facecolor('#fffbeb')
+    ax.set_facecolor('#fffbeb')
 
     steps = [
-        ('① คำนวณ\nผลต่างระยะทาง', r'$\Delta r = |r_1 - r_2|$', '#6366f1'),
-        ('② หารด้วย\nความยาวคลื่น', r'$k = \Delta r \div \lambda$', '#0891b2'),
-        ('③ ดูผลลัพธ์\n', '', '#374151'),
+        ('Step 1', r'$\Delta r = |r_1 - r_2|$', '#6366f1'),
+        ('Step 2', r'$k = \Delta r \,/\, \lambda$',  '#0891b2'),
+        ('Step 3', 'Check k', '#374151'),
     ]
-    for i, (label, formula, color) in enumerate(steps):
-        x = 0.13 + i * 0.32
-        rect = mpatches.FancyBboxPatch((x-0.11, 0.1), 0.22, 0.8,
-                                       boxstyle='round,pad=0.02',
-                                       fc='white', ec=color, lw=2,
+    outcomes = [
+        ('k = integer', 'Antinode\n(constructive)', '#16a34a', '#dcfce7'),
+        ('k ends in .5', 'Node\n(destructive)',    '#dc2626', '#fee2e2'),
+    ]
+
+    for i, (title, formula, col) in enumerate(steps):
+        x = 0.12 + i * 0.27
+        rect = mpatches.FancyBboxPatch((x-0.1, 0.08), 0.2, 0.84,
+                                       boxstyle='round,pad=0.02', fc='white',
+                                       ec=col, lw=2.2,
                                        transform=ax.transAxes, clip_on=False)
         ax.add_patch(rect)
-        ax.text(x, 0.78, label, transform=ax.transAxes,
-                ha='center', va='top', fontsize=10, color=color, fontweight='bold')
-        ax.text(x, 0.42, formula, transform=ax.transAxes,
+        ax.text(x, 0.85, title, transform=ax.transAxes,
+                ha='center', va='top', fontsize=10, color=col, fontweight='bold')
+        ax.text(x, 0.52, formula, transform=ax.transAxes,
                 ha='center', va='top', fontsize=11)
         if i < 2:
-            ax.annotate('', xy=(x+0.12, 0.5), xytext=(x+0.085, 0.5),
+            ax.annotate('', xy=(x+0.115, 0.5), xytext=(x+0.085, 0.5),
                         xycoords='axes fraction', textcoords='axes fraction',
-                        arrowprops=dict(arrowstyle='->', color='gray', lw=2))
+                        arrowprops=dict(arrowstyle='->', color='gray', lw=2.2))
 
-    # Step 3 result boxes
-    for xr, label, col, fc in [
-        (0.69, 'จำนวนเต็ม\n→ ปฏิบัพ (เสริม)', '#16a34a', '#dcfce7'),
-        (0.87, 'ลงท้าย .5\n→ บัพ (หักล้าง)', '#dc2626', '#fee2e2'),
-    ]:
-        rect = mpatches.FancyBboxPatch((xr-0.09, 0.1), 0.18, 0.8,
-                                       boxstyle='round,pad=0.02',
-                                       fc=fc, ec=col, lw=1.5,
+    for j, (cond, result, col, fc) in enumerate(outcomes):
+        xo = 0.72 + j * 0.15
+        rect = mpatches.FancyBboxPatch((xo-0.065, 0.08), 0.13, 0.84,
+                                       boxstyle='round,pad=0.02', fc=fc,
+                                       ec=col, lw=2,
                                        transform=ax.transAxes, clip_on=False)
         ax.add_patch(rect)
-        ax.text(xr, 0.62, label, transform=ax.transAxes,
+        ax.text(xo, 0.85, cond, transform=ax.transAxes,
+                ha='center', va='top', fontsize=9, color=col, fontweight='bold')
+        ax.text(xo, 0.55, result, transform=ax.transAxes,
                 ha='center', va='top', fontsize=9.5, color=col, fontweight='bold')
 
-    ax.annotate('', xy=(0.60, 0.5), xytext=(0.565, 0.5),
+    ax.annotate('', xy=(0.655, 0.5), xytext=(0.625, 0.5),
                 xycoords='axes fraction', textcoords='axes fraction',
-                arrowprops=dict(arrowstyle='->', color='gray', lw=2))
+                arrowprops=dict(arrowstyle='->', color='gray', lw=2.2))
 
-    ax.set_title('⚡ วิธีจำแบบง่าย — ทำ 3 ขั้น แล้วตอบได้เลย!',
-                 fontsize=12, fontweight='bold', pad=8)
+    ax.set_title('3-Step Method  —  works for every problem!',
+                 fontsize=11, fontweight='bold', pad=6)
     fig.tight_layout()
     return fig
 
 
-def _fig_antiphase():
-    """Antiphase sources: conditions swap."""
-    fig, ax = plt.subplots(figsize=(7, 3.5))
+def _fig_antiphase_table():
+    fig, ax = plt.subplots(figsize=(8, 2.6))
     ax.axis('off')
+    fig.patch.set_facecolor('#f8fafc')
 
+    cols_h = ['Δr', 'In-phase sources', 'Anti-phase sources']
     rows = [
-        ('ผลต่าง Δr', 'เฟสตรงกัน (ปกติ)', 'เฟสตรงข้าม (สลับ)'),
-        ('0, λ, 2λ, …',    '✅ ปฏิบัพ', '❌ บัพ'),
-        ('λ/2, 3λ/2, …',  '❌ บัพ',    '✅ ปฏิบัพ'),
+        ['0, λ, 2λ, …', 'Antinode (Constructive)', 'Node (Destructive)'],
+        ['λ/2, 3λ/2, …', 'Node (Destructive)',    'Antinode (Constructive)'],
     ]
-    col_colors = [['#e2e8f0']*3,
-                  ['#f8fafc', '#dcfce7', '#fee2e2'],
-                  ['#f8fafc', '#fee2e2', '#dcfce7']]
-    table = ax.table(cellText=rows, cellLoc='center', loc='center',
-                     cellColours=col_colors)
+    cell_colors = [
+        ['#f1f5f9', '#dcfce7', '#fee2e2'],
+        ['#f1f5f9', '#fee2e2', '#dcfce7'],
+    ]
+    table = ax.table(
+        cellText=rows,
+        colLabels=cols_h,
+        cellLoc='center',
+        loc='center',
+        cellColours=cell_colors,
+    )
     table.auto_set_font_size(False)
-    table.set_fontsize(11)
-    table.scale(1, 2.5)
+    table.set_fontsize(10.5)
+    table.scale(1, 2.4)
+    for (r, c), cell in table.get_celld().items():
+        cell.set_edgecolor('#cbd5e1')
+        if r == 0:
+            cell.set_facecolor('#1e3a8a')
+            cell.set_text_props(color='white', fontweight='bold')
 
-    ax.set_title('📌 เมื่อแหล่งกำเนิดเฟสตรงข้ามกัน — เงื่อนไขสลับกัน!',
-                 fontsize=12, fontweight='bold', pad=14)
+    ax.set_title('When sources are anti-phase  —  conditions SWAP!',
+                 fontsize=11, fontweight='bold', pad=10)
     fig.tight_layout()
     return fig
 
 
-# ─── main render function ──────────────────────────────────────────────────────
+def _fig_double_slit():
+    fig, ax = plt.subplots(figsize=(7, 4.5))
+    ax.set_xlim(-1, 9); ax.set_ylim(-3, 3)
+    ax.set_facecolor('#f0f9ff')
+    fig.patch.set_facecolor('#f0f9ff')
+
+    # Sources
+    for sy, col, lbl in [(0.5,'#2563eb','S₁'),(-0.5,'#dc2626','S₂')]:
+        ax.plot(0, sy, 'o', color=col, ms=10, zorder=5)
+        ax.text(-0.15, sy, lbl, ha='right', fontsize=12,
+                color=col, fontweight='bold')
+
+    # Screen
+    ax.plot([7.5, 7.5], [-2.8, 2.8], 'k-', lw=4)
+
+    # Central line
+    ax.plot([0, 7.5], [0, 0], 'gray', lw=0.8, ls=':', alpha=0.7)
+
+    # Antinodal lines at angles
+    d, lam = 1.0, 0.3
+    for n in range(-3, 4):
+        val = n * lam / d
+        if abs(val) < 1:
+            th = np.arcsin(val)
+            xe, ye = 7.5, 7.5 * np.tan(th)
+            if abs(ye) <= 2.8:
+                ax.plot([0, xe], [0, ye], '#16a34a', lw=1.5, alpha=0.8)
+                ax.plot(xe, ye, 'g^', ms=7, zorder=5)
+                ax.text(xe+0.15, ye, f'n={n}', fontsize=8, color='#16a34a')
+
+    # Labels
+    ax.annotate('', xy=(7.5, 2), xytext=(0, 0),
+                arrowprops=dict(arrowstyle='->', color='#9333ea', lw=1.8, ls='dashed'))
+    ax.text(3.5, 1.2, r'$\theta$', fontsize=14, color='#9333ea')
+
+    ax.text(3.8, -2.6,
+            r'$\sin\theta = n\lambda / d$',
+            fontsize=12, ha='center', color='#1e3a8a', fontweight='bold',
+            bbox=dict(boxstyle='round,pad=0.3', fc='white', ec='#2563eb', lw=1.5))
+
+    ax.set_title('Double-slit interference  —  antinodal directions',
+                 fontsize=10, fontweight='bold')
+    ax.axis('off')
+    fig.tight_layout()
+    return fig
+
+
+def _fig_count_guide():
+    """Visual showing how to count on the S1S2 line."""
+    fig, ax = plt.subplots(figsize=(9, 2.8))
+    ax.set_xlim(-0.5, 10.5); ax.set_ylim(-1.8, 2.0)
+    ax.axis('off')
+    fig.patch.set_facecolor('#f0fdf4')
+    ax.set_facecolor('#f0fdf4')
+
+    # S1 at 0, S2 at 10  (d=10, lam=2)
+    ax.plot([0, 10], [0, 0], 'k-', lw=2.5)
+    for xp, col, lbl in [(0,'#2563eb','S₁'),(10,'#dc2626','S₂')]:
+        ax.plot(xp, 0, 'o', color=col, ms=13, zorder=5)
+        ax.text(xp, -0.5, lbl, ha='center', fontsize=11,
+                color=col, fontweight='bold')
+
+    # Antinodes (green diamond) — Δr even multiples of λ=2
+    for dr, x_list in [
+        (0,  [5]),
+        (2,  [4, 6]),
+        (4,  [3, 7]),
+        (6,  [2, 8]),
+        (8,  [1, 9]),
+        (10, [0, 10]),
+    ]:
+        for xp in x_list:
+            ax.plot(xp, 0, 'D', color='#16a34a', ms=9, zorder=6)
+            ax.text(xp, 0.45, f'Δr={dr}', ha='center',
+                    fontsize=7.5, color='#16a34a', fontweight='bold')
+
+    # Nodes (red triangle) — Δr odd multiples of λ/2=1
+    for dr in [1, 3, 5, 7, 9]:
+        for xp in [(10+dr)/2, (10-dr)/2]:
+            ax.plot(xp, 0, 'v', color='#dc2626', ms=8, zorder=6)
+            ax.text(xp, -1.1, f'Δr={dr}', ha='center',
+                    fontsize=7.5, color='#dc2626')
+
+    ax.text(5, 1.7,
+            'd = 10 cm,  λ = 2 cm  →  Antinodes (green ◆) = 11,  Nodes (red ▼) = 10',
+            ha='center', fontsize=9, fontweight='bold',
+            bbox=dict(boxstyle='round,pad=0.25', fc='white', ec='#86efac'))
+    fig.tight_layout()
+    return fig
+
+
+# ─── Main render ──────────────────────────────────────────────────────────────
 
 def render_summary():
-    st.markdown("""
-<style>
-.sum-header {
-    font-size: 2rem; font-weight: 800; color: #1e3a8a;
-    text-align: center; margin-bottom: 4px;
-}
-.sum-sub {
-    font-size: 1rem; color: #64748b;
-    text-align: center; margin-bottom: 24px;
-}
-.concept-box {
-    background: #eff6ff;
-    border-left: 5px solid #2563eb;
-    border-radius: 8px;
-    padding: 14px 18px;
-    margin: 12px 0;
-}
-.concept-box h4 { margin: 0 0 6px 0; color: #1e40af; }
-.warn-box {
-    background: #fffbeb;
-    border-left: 5px solid #f59e0b;
-    border-radius: 8px;
-    padding: 12px 16px;
-    margin: 12px 0;
-}
-.example-box {
-    background: #f0fdf4;
-    border: 1px solid #86efac;
-    border-radius: 8px;
-    padding: 14px 18px;
-    margin: 12px 0;
-}
-</style>
-""", unsafe_allow_html=True)
+    st.markdown(_CSS, unsafe_allow_html=True)
 
-    st.markdown('<div class="sum-header">🌊 การแทรกสอดของคลื่น</div>', unsafe_allow_html=True)
-    st.markdown('<div class="sum-sub">Wave Interference — อ่านแล้วเข้าใจได้เลย!</div>', unsafe_allow_html=True)
+    st.markdown('<div class="s-title">🌊 การแทรกสอดของคลื่น</div>', unsafe_allow_html=True)
+    st.markdown('<div class="s-sub">Wave Interference — อ่านแล้วเข้าใจได้ทันที!</div>',
+                unsafe_allow_html=True)
 
-    # ── Section 1: คืออะไร
+    # ── 1. คืออะไร ──────────────────────────────────────────────────────────
     st.markdown("---")
     st.markdown("## 1️⃣ การแทรกสอดคืออะไร?")
 
-    col1, col2 = st.columns([1, 1])
+    col1, col2 = st.columns([1, 1], gap="large")
     with col1:
         st.markdown("""
-<div class="concept-box">
-<h4>🔑 นิยามง่ายๆ</h4>
+<div class="box-blue">
+<h4>🔑 ความหมายง่ายๆ</h4>
 
-**การแทรกสอด** คือปรากฏการณ์ที่คลื่น **2 ขบวนมาพบกัน** แล้วรวมกัน
+**การแทรกสอด (Interference)** คือเมื่อ **คลื่น 2 ขบวนมาพบกัน** แล้วรวมกัน
 
-- ถ้ายอดมาชนยอด → **เสริมกัน** (แอมพลิจูดสูงขึ้น)
-- ถ้ายอดมาชนราง → **หักล้างกัน** (แอมพลิจูดลดลง หรือเป็นศูนย์)
+- **ยอดชนยอด** → เสริมกัน 🟢 (แอมพลิจูดสูงขึ้น)
+- **ยอดชนราง** → หักล้างกัน 🔴 (แอมพลิจูดลดลง หรือเป็น 0)
 
-> 💡 คิดเหมือนเพื่อน 2 คนโยนก้อนหินลงสระ
-> คลื่นจากทั้งสองมาเจอกัน — บางจุดคลื่นสูงมาก บางจุดเงียบ!
+> 💡 เหมือนโยนก้อนหิน 2 ก้อนลงสระพร้อมกัน — บางจุดคลื่นสูงมาก บางจุดผิวน้ำนิ่งสนิท!
 </div>
 """, unsafe_allow_html=True)
 
     with col2:
-        _show(_fig_ripple, "คลื่นจาก S₁ (สีน้ำเงิน) และ S₂ (สีแดง) แผ่ออกมาพบกัน")
+        _show(_fig_ripple,
+              "คลื่นจาก S₁ (น้ำเงิน) และ S₂ (แดง) แผ่ออกมาพบกัน")
 
-    # ── Section 2: เสริม vs หักล้าง
+    # ── 2. เสริม vs หักล้าง ──────────────────────────────────────────────────
     st.markdown("---")
-    st.markdown("## 2️⃣ เสริมกัน vs หักล้างกัน")
+    st.markdown("## 2️⃣ เสริมกัน vs หักล้างกัน — ดูคลื่นจริง")
 
-    c1, c2 = st.columns(2)
+    c1, c2 = st.columns(2, gap="medium")
     with c1:
-        _show(_fig_constructive, "คลื่นสองขบวนเฟสตรงกัน → รวมกันได้แอมพลิจูดเป็น 2 เท่า")
+        _show(_fig_constructive,
+              "เฟสตรงกัน → ยอดชนยอด → แอมพลิจูดเป็น 2 เท่า")
     with c2:
-        _show(_fig_destructive, "คลื่นสองขบวนเฟสตรงข้ามกัน → หักล้างกันจนเป็นศูนย์")
+        _show(_fig_destructive,
+              "เฟสตรงข้าม → ยอดชนราง → ผลรวม = 0")
 
     st.markdown("""
-<div class="warn-box">
-⚠️ <strong>จำไว้!</strong> คลื่นสองขบวนผ่านกันแล้ว ต่างก็เดินทางต่อเหมือนไม่มีอะไรเกิดขึ้น
-การแทรกสอดเป็นแค่ผลชั่วคราวตรงจุดที่พบกัน
+<div class="box-warn">
+
+⚠️ <strong>จำไว้!</strong> คลื่นสองขบวนผ่านกันแล้วต่างก็เดินทางต่อไปเหมือนเดิม
+การแทรกสอดเป็นแค่ผลชั่วคราว <em>ตรงจุดที่พบกัน</em>
 </div>
 """, unsafe_allow_html=True)
 
-    # ── Section 3: ผลต่างระยะทาง
+    # ── 3. ผลต่างระยะทาง ────────────────────────────────────────────────────
     st.markdown("---")
     st.markdown("## 3️⃣ ผลต่างระยะทาง (Δr) — กุญแจสำคัญ!")
 
     _show(_fig_path_diff,
-          "ผลต่างระยะทาง Δr = ระยะห่างจากแหล่งกำเนิดสองแหล่งมายังจุด P ที่ต่างกัน")
+          "Δr = ผลต่างระยะทางจากแหล่งกำเนิดสองแหล่งมายังจุด P")
 
     st.markdown("""
-<div class="concept-box">
+<div class="box-blue">
 <h4>📏 ผลต่างระยะทาง (Path Difference)</h4>
+</div>
+""", unsafe_allow_html=True)
 
-$$\\Delta r = |r_1 - r_2|$$
+    st.latex(r"\Delta r = |r_1 - r_2|")
 
+    st.markdown("""
 - $r_1$ = ระยะจาก **S₁** ถึงจุด P
 - $r_2$ = ระยะจาก **S₂** ถึงจุด P
+- **Δr ใกล้จำนวนเต็มของ λ → เสริมกัน** (ปฏิบัพ)
+- **Δr ใกล้ครึ่งหนึ่งของ λ → หักล้างกัน** (บัพ)
+""")
 
-**ยิ่ง Δr ใกล้จำนวนเต็มของ λ → ยิ่งเสริมกัน**
-**ยิ่ง Δr ใกล้ครึ่งหนึ่งของ λ → ยิ่งหักล้างกัน**
+    # ── 4. สูตรเงื่อนไข ─────────────────────────────────────────────────────
+    st.markdown("---")
+    st.markdown("## 4️⃣ สูตรเงื่อนไข (แหล่งกำเนิดเฟสตรงกัน)")
+
+    _show(_fig_formula_summary)
+
+    col_a, col_b = st.columns(2, gap="large")
+    with col_a:
+        st.markdown("""
+<div class="box-green">
+<strong>✅ ปฏิบัพ (Antinode) — เสริมกัน</strong>
 </div>
 """, unsafe_allow_html=True)
+        st.latex(r"\Delta r = n\lambda \quad (n = 0,1,2,3,\ldots)")
+        st.markdown("แอมพลิจูด = **2A** (สูงสุด)")
 
-    # ── Section 4: สูตรเงื่อนไข
-    st.markdown("---")
-    st.markdown("## 4️⃣ สูตรเงื่อนไข (เฟสตรงกัน)")
-
-    _show(_fig_formula_card)
-
-    st.markdown("""
-<div class="example-box">
-
-**🧮 ตัวอย่าง:** S₁S₂ ให้คลื่น λ = 4 cm, จุด A ห่างจาก S₁ = 12 cm, ห่างจาก S₂ = 18 cm
-
-$$\\Delta r = 18 - 12 = 6 \\text{ cm}$$
-
-$$\\frac{\\Delta r}{\\lambda} = \\frac{6}{4} = 1.5$$
-
-ลงท้ายด้วย **.5** → จุด A อยู่บน**บัพ** (หักล้างกัน) ลำดับที่ 2 ✅
+    with col_b:
+        st.markdown("""
+<div class="box-red">
+<h4>❌ บัพ (Node) — หักล้างกัน</h4>
 </div>
 """, unsafe_allow_html=True)
+        st.latex(r"\Delta r = \left(n - \frac{1}{2}\right)\lambda \quad (n = 1,2,3,\ldots)")
+        st.markdown("แอมพลิจูด = **0** (เป็นศูนย์)")
 
-    # ── Section 5: วิธีจำ
+    # ── 5. วิธีจำ 3 ขั้น ────────────────────────────────────────────────────
     st.markdown("---")
-    st.markdown("## 5️⃣ วิธีจำ — 3 ขั้นตอน")
+    st.markdown("## 5️⃣ วิธีทำโจทย์ — 3 ขั้นตอน ไม่ผิดพลาด!")
 
-    _show(_fig_mnemonic)
+    _show(_fig_steps)
 
     st.markdown("""
-<div class="example-box">
+<div class="box-green">
 
-**🧮 ลองทำ:** จุด B: r₁ = 20 cm, r₂ = 28 cm, λ = 4 cm
+**🧮 ตัวอย่าง:** S₁ และ S₂ ให้คลื่น λ = 4 cm
+จุด A ห่างจาก S₁ = 12 cm, ห่างจาก S₂ = 18 cm
 
-**ขั้น 1:** Δr = 28 − 20 = **8 cm**
+**ขั้น 1:** Δr = 18 − 12 = **8 cm**
 
 **ขั้น 2:** k = 8 ÷ 4 = **2.0**
 
-**ขั้น 3:** เป็นจำนวนเต็ม → **ปฏิบัพลำดับที่ 2** 🎉
+**ขั้น 3:** k = 2.0 เป็นจำนวนเต็ม → จุด A อยู่บน **ปฏิบัพลำดับที่ 2** ✅
 </div>
 """, unsafe_allow_html=True)
 
-    # ── Section 6: รูปแบบการแทรกสอด
-    st.markdown("---")
-    st.markdown("## 6️⃣ รูปแบบการแทรกสอดทั้งหมด")
+    st.markdown("""
+<div class="box-green">
 
-    _show(_fig_interference_pattern,
-          "แนวปฏิบัพ (เส้นสีเขียว) และแนวบัพ (เส้นประสีแดง) ที่เกิดขึ้น")
+**🧮 ตัวอย่างที่ 2:** λ = 4 cm, Δr = 6 cm
+
+**ขั้น 2:** k = 6 ÷ 4 = **1.5**
+
+**ขั้น 3:** k ลงท้าย .5 → **บัพลำดับที่ 2** ❌ (หักล้าง)
+</div>
+""", unsafe_allow_html=True)
+
+    # ── 6. รูปแบบการแทรกสอดทั้งหมด ─────────────────────────────────────────
+    st.markdown("---")
+    st.markdown("## 6️⃣ รูปแบบการแทรกสอดทั้งหมด (Interference Pattern)")
+
+    _show(_fig_pattern,
+          "เส้นสีเขียว = แนวปฏิบัพ (เสริมกัน), เส้นประสีแดง = แนวบัพ (หักล้างกัน)")
+
+    # ── 7. นับจำนวนแนว ──────────────────────────────────────────────────────
+    st.markdown("---")
+    st.markdown("## 7️⃣ นับจำนวนแนว — ใช้สูตรนี้")
+
+    _show(_fig_count_guide,
+          "ตัวอย่าง d = 10 cm, λ = 2 cm — นับตำแหน่งบัพและปฏิบัพบนเส้น S₁S₂")
 
     st.markdown("""
-<div class="concept-box">
-<h4>🔢 วิธีนับจำนวนแนว (เฟสตรงกัน)</h4>
+<div class="box-blue">
+<h4>🔢 สูตรนับจำนวนแนว (เฟสตรงกัน)</h4>
 
-หา $n_{max} = \\left\\lfloor \\dfrac{d}{\\lambda} \\right\\rfloor$ (เอาแค่จำนวนเต็ม)
+หา $n_{max}$ ก่อน:
+</div>
+""", unsafe_allow_html=True)
 
-| สิ่งที่นับ | สูตร |
-|-----------|------|
-| แนวปฏิบัพทั้งหมด | $2n_{max} + 1$ |
-| แนวบัพทั้งหมด | $2n_{max}$ |
+    st.latex(r"n_{max} = \left\lfloor \frac{d}{\lambda} \right\rfloor \quad \text{(เอาแค่จำนวนเต็ม)}")
 
-**ตัวอย่าง:** d = 10 cm, λ = 2.5 cm → n_max = 4
+    col_c, col_d = st.columns(2)
+    with col_c:
+        st.markdown("**จำนวนแนวปฏิบัพทั้งหมด:**")
+        st.latex(r"2n_{max} + 1")
+    with col_d:
+        st.markdown("**จำนวนแนวบัพทั้งหมด:**")
+        st.latex(r"2n_{max}")
+
+    st.markdown("""
+<div class="box-green">
+
+**ตัวอย่าง:** d = 10 cm, λ = 2.5 cm
+
+$n_{max} = \lfloor 10/2.5 \rfloor = 4$
 
 แนวปฏิบัพ = 2×4+1 = **9 แนว**, แนวบัพ = 2×4 = **8 แนว**
 </div>
 """, unsafe_allow_html=True)
 
-    _show(_fig_node_count,
-          "ตัวอย่างการนับตำแหน่งบัพและปฏิบัพบนเส้น S₁S₂ (d=10cm, λ=2cm)")
-
-    # ── Section 7: กรณีบนแนว S1S2
+    # ── 8. นับบน vs ระหว่าง ──────────────────────────────────────────────────
     st.markdown("---")
-    st.markdown("## 7️⃣ นับเฉพาะ บน/ระหว่าง เส้น S₁S₂")
-
-    col_a, col_b = st.columns(2)
-    with col_a:
-        st.markdown("""
-**📍 บนแนวเส้น S₁S₂ (รวม S₁ และ S₂)**
-
-$$\\text{ปฏิบัพ} = 2n_0 + 1$$
-$$\\text{บัพ} = 2n_0$$
-
-โดย $n_0 = \\left\\lfloor \\dfrac{d}{\\lambda} \\right\\rfloor$
-""")
-    with col_b:
-        st.markdown("""
-**📍 ระหว่าง S₁S₂ (ไม่รวม S₁ และ S₂)**
-
-$$\\text{ปฏิบัพ} = 2n_0 - 1 \\quad \\text{(ถ้า } d=n_0\\lambda\\text{)}$$
-$$\\text{บัพ} = 2(n_0 - 1) \\quad \\text{(กรณีเดียวกัน)}$$
-
-⚠️ ถ้า d ไม่ใช่จำนวนเต็มของ λ ให้นับตามจริง
-""")
-
-    # ── Section 8: เฟสตรงข้าม
-    st.markdown("---")
-    st.markdown("## 8️⃣ กรณีพิเศษ: แหล่งกำเนิดเฟสตรงข้ามกัน")
-
-    _show(_fig_antiphase)
+    st.markdown("## 8️⃣ นับ 'บนแนว S₁S₂' vs 'ระหว่าง S₁S₂'")
 
     st.markdown("""
-<div class="warn-box">
-⚠️ <strong>เฟสตรงข้าม = เงื่อนไขสลับกัน!</strong><br>
-เมื่อ Δr = 0 → คลื่นมาถึงพร้อมกัน แต่เฟสต่างกัน 180° → <strong>หักล้าง (บัพ)</strong><br>
-เมื่อ Δr = λ/2 → เฟสต่างกัน 180° + 180° = 360° → <strong>เสริม (ปฏิบัพ)</strong>
+| | บนแนว S₁S₂ (รวม S₁ และ S₂) | ระหว่าง S₁S₂ (ไม่รวม S₁ S₂) |
+|---|---|---|
+| **ปฏิบัพ** | $2n_0 + 1$ | $2n_0 - 1$ |
+| **บัพ** | $2n_0$ | $2(n_0 - 1)$ |
+
+*(ใช้เมื่อ d หารด้วย λ ได้ลงตัวพอดี คือ $d = n_0 \\lambda$)*
+""")
+
+    st.markdown("""
+<div class="box-warn">
+
+⚠️ ถ้า $d / \\lambda$ <strong>ไม่ลงตัว</strong> ให้นับตามค่าจริงโดยเปรียบเทียบ Δr ≤ d
 </div>
 """, unsafe_allow_html=True)
 
-    # ── Section 9: Double-slit (มุม θ)
+    # ── 9. เฟสตรงข้าม ────────────────────────────────────────────────────────
     st.markdown("---")
-    st.markdown("## 9️⃣ ปฏิบัพในทิศมุม θ (Double Slit)")
+    st.markdown("## 9️⃣ กรณีพิเศษ: แหล่งกำเนิดเฟสตรงข้าม (Anti-phase)")
 
-    col_f, col_ex = st.columns([1, 1])
+    _show(_fig_antiphase_table)
+
+    st.markdown("""
+<div class="box-warn">
+
+⚠️ <strong>เฟสตรงข้าม = เงื่อนไขสลับกันทั้งหมด!</strong>
+
+- เมื่อ Δr = 0: คลื่นมาถึงพร้อมกัน แต่เฟสต่างกัน 180° อยู่แล้ว → **หักล้าง (บัพ)**
+- เมื่อ Δr = λ/2: เฟสห่าง 180° + เพิ่มอีก 180° = 360° → **เสริม (ปฏิบัพ)**
+</div>
+""", unsafe_allow_html=True)
+
+    # ── 10. ช่องสลิตคู่ ──────────────────────────────────────────────────────
+    st.markdown("---")
+    st.markdown("## 🔟 การแทรกสอดในทิศมุม θ (Double Slit)")
+
+    _show(_fig_double_slit, "เส้นสีเขียวคือแนวปฏิบัพ — แต่ละเส้นสอดคล้องกับค่า n หนึ่งค่า")
+
+    col_e, col_f = st.columns(2, gap="large")
+    with col_e:
+        st.markdown("**สูตรมุมปฏิบัพลำดับที่ n:**")
+        st.latex(r"\sin\theta = \frac{n\lambda}{d}")
+        st.markdown("**ระยะบนฉากที่ห่าง L (θ เล็ก):**")
+        st.latex(r"x = \frac{n\lambda L}{d}")
+
     with col_f:
         st.markdown("""
-<div class="concept-box">
-<h4>📐 สูตร</h4>
+<div class="box-green">
 
-$$\\sin\\theta = \\frac{n\\lambda}{d}$$
+**ตัวอย่าง:** d = 10 cm, λ = 1 cm, L = 60 cm
 
-- $n$ = ลำดับปฏิบัพ (0, 1, 2, …)
-- $d$ = ระยะห่างแหล่งกำเนิด
-- $\\lambda$ = ความยาวคลื่น
+ปฏิบัพที่ 1 (n = 1):
 
-**ถ้าฉากอยู่ห่าง L (และ θ เล็ก):**
-$$x = \\frac{n\\lambda L}{d}$$
+$x = (1 \\times 1 \\times 60)/10 = 6$ cm
+
+ปฏิบัพที่ 2 (n = 2):
+
+$x = (2 \\times 1 \\times 60)/10 = 12$ cm
 </div>
 """, unsafe_allow_html=True)
 
-    with col_ex:
-        st.markdown("""
-<div class="example-box">
-
-**🧮 ตัวอย่าง:** d = 10 cm, λ = 1 cm, L = 60 cm
-
-ปฏิบัพที่ 1 (n=1):
-$$x = \\frac{1 \\times 1 \\times 60}{10} = 6 \\text{ cm}$$
-
-ปฏิบัพที่ 2 (n=2):
-$$x = \\frac{2 \\times 1 \\times 60}{10} = 12 \\text{ cm}$$
-</div>
-""", unsafe_allow_html=True)
-
-    # ── Section 10: สรุปทุกอย่าง
+    # ── สรุปรวม ──────────────────────────────────────────────────────────────
     st.markdown("---")
-    st.markdown("## 🗂️ สรุปรวม — ดูรวดเดียวจบ")
+    st.markdown("## 🗂️ ตารางสรุปรวม — ดูรวดเดียวจบ!")
 
     st.markdown("""
 | สถานการณ์ | เงื่อนไขปฏิบัพ | เงื่อนไขบัพ |
-|-----------|----------------|------------|
-| เฟสตรงกัน | Δr = 0, λ, 2λ, … | Δr = λ/2, 3λ/2, … |
-| เฟสตรงข้าม | Δr = λ/2, 3λ/2, … | Δr = 0, λ, 2λ, … |
-| จำนวนแนวปฏิบัพ | $2n_{max}+1$ แนว | — |
-| จำนวนแนวบัพ | — | $2n_{max}$ แนว |
-| ปฏิบัพทิศ θ | $\\sin\\theta = n\\lambda/d$ | $\\sin\\theta = (n-½)\\lambda/d$ |
-| ระยะบนฉาก | $x = n\\lambda L/d$ | — |
-
-> 💪 **เคล็ดลับสุดท้าย:** ทุกข้อเริ่มจาก Δr → หารด้วย λ → ดูตัวเลข → ตอบได้เลย!
+|---|---|---|
+| เฟสตรงกัน | $\\Delta r = 0, \\lambda, 2\\lambda, \\ldots$ | $\\Delta r = \\tfrac{\\lambda}{2}, \\tfrac{3\\lambda}{2}, \\ldots$ |
+| เฟสตรงข้าม | $\\Delta r = \\tfrac{\\lambda}{2}, \\tfrac{3\\lambda}{2}, \\ldots$ | $\\Delta r = 0, \\lambda, 2\\lambda, \\ldots$ |
+| แนวปฏิบัพทั้งหมด | $2n_{max}+1$ แนว | — |
+| แนวบัพทั้งหมด | — | $2n_{max}$ แนว |
+| มุม θ บนฉาก | $\\sin\\theta = n\\lambda/d$ | $\\sin\\theta = (n-\\tfrac{1}{2})\\lambda/d$ |
+| ระยะ x บนฉาก | $x = n\\lambda L/d$ | — |
 """)
 
-    st.success("🎉 เข้าใจแล้ว! ลองไปทำโจทย์ในแท็บ 📚 แบบฝึกหัด ได้เลย")
+    st.success("""
+💪 **เคล็ดลับสุดท้าย:**
+ทุกข้อเริ่มจาก **หา Δr** → **หารด้วย λ** → **ดูว่าได้จำนวนเต็มหรือ .5** → ตอบได้เลย!
+
+🎉 ลองไปทำโจทย์ในแท็บ **📚 แบบฝึกหัด** ได้เลย!
+""")
