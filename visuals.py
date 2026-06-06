@@ -1,24 +1,31 @@
 import matplotlib.pyplot as plt
 import numpy as np
-import streamlit as st
 
 def get_plot_for_question(q_index):
-    """ฟังก์ชันนี้จะเลือกวาดรูปตามเลขข้อที่รับเข้ามา"""
+    """Function to generate plots based on the question index."""
     
-    # ตัวอย่างข้อที่ 1: วาดกราฟคลื่น
+    # Question 1: Wave graphs (y-x and y-t)
     if q_index == 1:
-        fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(5, 5))
-        x = np.linspace(0, 4*np.pi, 100)
-        ax1.plot(x, np.sin(x), color='blue')
-        ax1.set_title("รูปที่ (1) กราฟ y-x")
+        fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(6, 6))
         
+        # Plot 1: Displacement vs Position (y-x)
+        x = np.linspace(0, 4*np.pi, 100)
+        ax1.plot(x, np.sin(x), color='blue', linewidth=2)
+        ax1.set_title("Figure (1): Displacement vs Position (y-x)")
+        ax1.set_xlabel("Position (x)")
+        ax1.set_ylabel("Displacement (y)")
+        ax1.grid(True, linestyle='--', alpha=0.7)
+        
+        # Plot 2: Displacement vs Time (y-t)
         t = np.linspace(0, 2, 100)
-        ax2.plot(t, np.sin(2 * np.pi * t), color='red')
-        ax2.set_title("รูปที่ (2) กราฟ y-t")
+        ax2.plot(t, np.sin(2 * np.pi * t), color='red', linewidth=2)
+        ax2.set_title("Figure (2): Displacement vs Time (y-t)")
+        ax2.set_xlabel("Time (t)")
+        ax2.set_ylabel("Displacement (y)")
+        ax2.grid(True, linestyle='--', alpha=0.7)
+        
         plt.tight_layout()
         return fig
     
-    # เพิ่มข้ออื่นๆ ที่นี่...
-    # elif q_index == 13: ...
-    
+    # Add other questions here as we go...
     return None
