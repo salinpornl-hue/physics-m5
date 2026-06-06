@@ -311,39 +311,61 @@ def _fig_superposition():
 # ═══════════════════════════════════════════════════════════════════════════════
 #  FIGURE 3 — Path difference geometry
 # ═══════════════════════════════════════════════════════════════════════════════
+def _draw_wave_along_path(ax, src, dst, lam, color, amp=0.28,
+                          lw=2.4, zorder=5, phase=0.0):
+    """Draw a sine wave travelling from src → dst along the straight path."""
+    vec   = dst - src
+    dist  = np.linalg.norm(vec)
+    uhat  = vec / dist                        # unit tangent
+    nhat  = np.array([-uhat[1], uhat[0]])     # unit normal (perpendicular)
+
+    n_pts = 600
+    t     = np.linspace(0.0, dist, n_pts)
+    osc   = amp * np.sin(2 * np.pi * t / lam + phase)
+
+    pts   = np.array([src + t[i] * uhat + osc[i] * nhat
+                      for i in range(n_pts)])
+    ax.plot(pts[:, 0], pts[:, 1], color=color, lw=lw,
+            solid_capstyle='round', zorder=zorder)
+
+
 def _fig_path_diff():
-    """Geometric diagram: S1, S2, point P, r1, r2, Δr."""
+    """Geometric diagram with sine waves drawn along r₁ and r₂."""
     with plt.rc_context(RC):
-        fig, ax = plt.subplots(figsize=(8.5, 5.5))
-        ax.set_facecolor('#f8fafc')
-        fig.patch.set_facecolor('#f8fafc')
+        fig, ax = plt.subplots(figsize=(9, 5.8))
+        ax.set_facecolor('#f0f6ff')
+        fig.patch.set_facecolor('#f0f6ff')
         ax.axis('off')
-        ax.set_xlim(-0.5, 10.5); ax.set_ylim(-0.5, 6.0)
 
         s1 = np.array([0.5, 4.8])
         s2 = np.array([0.5, 0.8])
-        P  = np.array([8.5, 3.0])
+        P  = np.array([8.8, 3.0])
+        lam = 1.2
         r1 = np.linalg.norm(P - s1)
         r2 = np.linalg.norm(P - s2)
         dr = abs(r1 - r2)
 
-        # Circular wavefronts
-        lam = 1.2
+        # ── Circular wavefront rings (faint background) ──────────────────
         for src, col in [(s1, CB), (s2, CR)]:
-            for n in range(1, 7):
+            for n in range(1, 8):
                 r = n * lam
+                alpha = max(0.07, 0.55 - n * 0.06)
+                lw_r  = 1.5 if n % 2 != 0 else 0.9
                 c = plt.Circle(src, r, color=col, fill=False,
-                               lw=1.0 if n % 2 == 0 else 1.5,
-                               alpha=max(0.08, 0.6 - n * 0.07),
-                               ls='-' if n % 2 == 0 else '-',
-                               zorder=2)
+                               lw=lw_r, alpha=alpha, zorder=2)
                 ax.add_patch(c)
 
-        # Path lines
+        # ── Dashed centre-line along each path ───────────────────────────
         ax.plot([s1[0], P[0]], [s1[1], P[1]], '--',
-                color=CB, lw=2.0, alpha=0.9, zorder=4)
+                color=CB, lw=1.2, alpha=0.45, zorder=3)
         ax.plot([s2[0], P[0]], [s2[1], P[1]], '--',
-                color=CR, lw=2.0, alpha=0.9, zorder=4)
+                color=CR, lw=1.2, alpha=0.45, zorder=3)
+
+        # ── Sine waves along each path ────────────────────────────────────
+        _draw_wave_along_path(ax, s1, P, lam, color=CB,
+                              amp=0.30, lw=2.6, zorder=5, phase=0.0)
+        _draw_wave_along_path(ax, s2, P, lam, color=CR,
+                              amp=0.30, lw=2.6, zorder=5, phase=0.0)
 
         # Source markers
         for src, col, lbl in [(s1, CB, 'S₁'), (s2, CR, 'S₂')]:
@@ -359,38 +381,52 @@ def _fig_path_diff():
         ax.text(P[0] + 0.25, P[1] + 0.22, 'P',
                 color=CG, fontsize=14, fontweight='bold')
 
-        # r1 and r2 labels
-        m1 = (s1 + P) / 2
-        m2 = (s2 + P) / 2
-        a1 = np.degrees(np.arctan2(P[1]-s1[1], P[0]-s1[0]))
-        a2 = np.degrees(np.arctan2(P[1]-s2[1], P[0]-s2[0]))
-        ax.text(m1[0]-0.1, m1[1]+0.3, f'r₁ = {r1:.1f} cm',
-                color=CB, fontsize=10, rotation=a1, ha='center',
-                fontweight='700',
-                bbox=dict(fc='#f8fafc', ec='none', pad=1.5))
-        ax.text(m2[0]+0.1, m2[1]-0.35, f'r₂ = {r2:.1f} cm',
-                color=CR, fontsize=10, rotation=a2, ha='center',
-                fontweight='700',
-                bbox=dict(fc='#f8fafc', ec='none', pad=1.5))
+        # ── r₁ and r₂ labels (offset perpendicular to path) ─────────────
+        def _label_path(src, dst, txt, color, side=1):
+            """side=+1 above, side=-1 below relative to path normal."""
+            vec  = dst - src
+            dist = np.linalg.norm(vec)
+            uhat = vec / dist
+            nhat = np.array([-uhat[1], uhat[0]])  # perpendicular
+            mid  = src + 0.52 * vec               # 52% along the path
+            off  = mid + side * 0.55 * nhat       # shift perpendicular
+            ang  = np.degrees(np.arctan2(vec[1], vec[0]))
+            ax.text(off[0], off[1], txt,
+                    color=color, fontsize=10, rotation=ang,
+                    ha='center', va='center', fontweight='700',
+                    bbox=dict(fc='#f0f6ff', ec='none', pad=2, alpha=0.8),
+                    zorder=8)
 
-        # d annotation
-        ax.annotate('', xy=(s1[0]-0.35, s1[1]),
-                    xytext=(s1[0]-0.35, s2[1]),
+        _label_path(s1, P, f'r₁ = {r1:.1f} cm', CB,  side=+1)
+        _label_path(s2, P, f'r₂ = {r2:.1f} cm', CR,  side=-1)
+
+        # ── d annotation ─────────────────────────────────────────────────
+        ax.annotate('', xy=(s1[0]-0.4, s1[1]),
+                    xytext=(s1[0]-0.4, s2[1]),
                     arrowprops=dict(arrowstyle='<->', color=CGR, lw=1.4))
-        ax.text(s1[0]-0.7, (s1[1]+s2[1])/2, f'd = {abs(s1[1]-s2[1]):.1f} cm',
+        ax.text(s1[0]-0.75, (s1[1]+s2[1])/2,
+                f'd = {abs(s1[1]-s2[1]):.1f} cm',
                 color=CGR, fontsize=8.5, ha='right', va='center')
 
-        # Δr box
-        ax.text(4.5, 5.75,
+        # ── λ label on first ring from S₁ ────────────────────────────────
+        ax.annotate('', xy=(s1[0], s1[1]+lam), xytext=(s1[0], s1[1]),
+                    arrowprops=dict(arrowstyle='<->', color=CB, lw=1.3),
+                    zorder=6)
+        ax.text(s1[0]+0.35, s1[1]+lam*0.5, f'λ={lam:.1f}cm',
+                color=CB, fontsize=8, va='center', zorder=8)
+
+        # ── Δr callout box ────────────────────────────────────────────────
+        ax.text(4.8, 6.02,
                 f'Δr  =  |r₁ − r₂|  =  {dr:.2f} cm',
                 fontsize=13, ha='center', fontweight='bold',
                 color='#78350f',
                 bbox=dict(boxstyle='round,pad=0.5', fc='#fef3c7',
-                          ec='#f59e0b', lw=2.2))
+                          ec='#f59e0b', lw=2.2), zorder=9)
 
-        ax.text(0.5, -0.35,
-                'Top view — solid rings = wave crests from each source',
+        ax.text(0.5, -0.22,
+                'Top view — rings = wave crests,  wavy lines = waves travelling along each path',
                 fontsize=8.5, color=CGR, style='italic')
+        ax.set_xlim(-0.8, 10.8); ax.set_ylim(-0.3, 6.2)
         fig.tight_layout(pad=0.5)
     return fig
 
