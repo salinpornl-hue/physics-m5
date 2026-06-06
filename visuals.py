@@ -15,7 +15,7 @@ def get_plot_for_question(q_index):
         ax1.set_title("Figure (1): Wave Profile")
         ax1.set_xlabel("Position (m)")
         ax1.set_ylabel("Displacement")
-        ax1.set_xticks([0, 0.05, 0.1, 0.15, 0.2])
+        ax1.set_xticks([0, 0.2, 0.4, 0.6, 0.8])
         ax1.set_yticks([-0.5, 0, 0.5])
         ax1.grid(True, linestyle='--')
         
