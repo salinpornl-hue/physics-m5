@@ -1,8 +1,23 @@
+import io
 import streamlit as st
 from visuals import get_plot_for_question
 from answers import ANSWERS
 from answer_keys import ANSWER_KEYS, check_answer
 from summary import render_summary
+
+
+@st.cache_data(show_spinner=False)
+def _figure_png(q_num: int) -> bytes | None:
+    """Render question figure once and cache as PNG bytes."""
+    import matplotlib.pyplot as plt
+    fig = get_plot_for_question(q_num)
+    if fig is None:
+        return None
+    buf = io.BytesIO()
+    fig.savefig(buf, format="png", dpi=130, bbox_inches="tight")
+    buf.seek(0)
+    plt.close(fig)
+    return buf.getvalue()
 
 st.set_page_config(
     page_title="ฟิสิกส์ ม.5 — คลื่นกล",
@@ -484,9 +499,9 @@ with tab_exercise:
         </div>
         """, unsafe_allow_html=True)
 
-        fig = get_plot_for_question(i)
-        if fig:
-            st.pyplot(fig, use_container_width=True)
+        png = _figure_png(i)
+        if png:
+            st.image(png, use_container_width=True)
 
         # Answer input section
         st.markdown("<div class='input-section-label'>✏️ กรอกคำตอบ</div>",
