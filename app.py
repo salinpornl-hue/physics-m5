@@ -1,9 +1,50 @@
 import io
+import re
 import streamlit as st
 from visuals import get_plot_for_question
 from answers import ANSWERS
 from answer_keys import ANSWER_KEYS, check_answer
 from summary import render_summary
+
+
+def _simplify_latex(expr: str) -> str:
+    """Convert LaTeX tokens inside an expression to Unicode/HTML (no outer span)."""
+    # degree symbol: ^{\circ}
+    expr = re.sub(r'\^\{\\circ\}', '°', expr)
+    # superscripts: ^{...}  ^x
+    expr = re.sub(r'\^\{([^}]+)\}', lambda m: f'<sup>{m.group(1)}</sup>', expr)
+    expr = re.sub(r'\^([0-9A-Za-z])', lambda m: f'<sup>{m.group(1)}</sup>', expr)
+    # square root: \sqrt{x}
+    expr = re.sub(r'\\sqrt\{([^}]+)\}', lambda m: f'√{m.group(1)}', expr)
+    # Greek & trig
+    expr = (expr
+            .replace(r'\lambda', 'λ')
+            .replace(r'\theta', 'θ')
+            .replace(r'\pi', 'π')
+            .replace(r'\sin', 'sin')
+            .replace(r'\cos', 'cos')
+            .replace(r'\tan', 'tan'))
+    # subscripts: _{...}  _x
+    expr = re.sub(r'_\{([^}]+)\}', lambda m: f'<sub>{m.group(1)}</sub>', expr)
+    expr = re.sub(r'_([0-9A-Za-z])', lambda m: f'<sub>{m.group(1)}</sub>', expr)
+    # strip remaining braces / backslashes
+    expr = expr.replace('{', '').replace('}', '').replace('\\', '')
+    return expr
+
+
+def render_math(text: str) -> str:
+    """Replace $...$ inline LaTeX with styled HTML spans."""
+    def _convert(m: re.Match) -> str:
+        inner = m.group(1)
+        # handle \frac{num}{den} before everything else
+        inner = re.sub(
+            r'\\frac\{([^}]+)\}\{([^}]+)\}',
+            lambda f: f'{_simplify_latex(f.group(1))}/{_simplify_latex(f.group(2))}',
+            inner,
+        )
+        html = _simplify_latex(inner)
+        return f'<span style="font-style:italic">{html}</span>'
+    return re.sub(r'\$([^$\n]+)\$', _convert, text)
 
 
 @st.cache_data(show_spinner=False)
@@ -256,22 +297,6 @@ hr { border-color: #e2e8f0 !important; margin: 12px 0 !important; }
     margin-top: 24px;
 }
 </style>
-<script>
-window.MathJax = {
-  tex: { inlineMath: [['$', '$'], ['\\(', '\\)']] },
-  svg: { fontCache: 'global' }
-};
-</script>
-<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
-<script>
-// Re-typeset whenever Streamlit swaps content
-const _mjObserver = new MutationObserver(() => {
-  if (window.MathJax && window.MathJax.typesetPromise) {
-    window.MathJax.typesetPromise();
-  }
-});
-_mjObserver.observe(document.body, { childList: true, subtree: true });
-</script>
 """, unsafe_allow_html=True)
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -474,7 +499,7 @@ with tab_summary:
 
 with tab_exercise:
     i        = st.session_state.selected_q
-    q_text   = questions[i - 1]
+    q_text   = render_math(questions[i - 1])
     key_data = ANSWER_KEYS.get(i)
     answer   = ANSWERS.get(i)
     topic_of_q = next((t for t, qs in TOPICS if i in qs), "")
