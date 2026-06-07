@@ -5,6 +5,7 @@ from visuals import get_plot_for_question
 from answers import ANSWERS
 from answer_keys import ANSWER_KEYS, check_answer
 from summary import render_summary
+from summary_standing_waves import render_standing_waves
 
 
 def _simplify_latex(expr: str) -> str:
@@ -492,10 +493,17 @@ with st.sidebar:
 # ═══════════════════════════════════════════════════════════════════════════════
 # MAIN TABS
 # ═══════════════════════════════════════════════════════════════════════════════
-tab_exercise, tab_summary = st.tabs(["📚  แบบฝึกหัด", "📖  สรุปทฤษฎีการแทรกสอด"])
+tab_exercise, tab_summary, tab_standing = st.tabs([
+    "📚  แบบฝึกหัด",
+    "📖  สรุป: การแทรกสอด",
+    "🎵  สรุป: คลื่นนิ่ง / สั่นพ้อง",
+])
 
 with tab_summary:
     render_summary()
+
+with tab_standing:
+    render_standing_waves()
 
 with tab_exercise:
     i        = st.session_state.selected_q
