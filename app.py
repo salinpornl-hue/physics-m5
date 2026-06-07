@@ -256,6 +256,22 @@ hr { border-color: #e2e8f0 !important; margin: 12px 0 !important; }
     margin-top: 24px;
 }
 </style>
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['$', '$'], ['\\(', '\\)']] },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+<script>
+// Re-typeset whenever Streamlit swaps content
+const _mjObserver = new MutationObserver(() => {
+  if (window.MathJax && window.MathJax.typesetPromise) {
+    window.MathJax.typesetPromise();
+  }
+});
+_mjObserver.observe(document.body, { childList: true, subtree: true });
+</script>
 """, unsafe_allow_html=True)
 
 # ═══════════════════════════════════════════════════════════════════════════════
