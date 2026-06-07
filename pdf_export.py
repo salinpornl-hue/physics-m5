@@ -136,6 +136,13 @@ def _html_header(n: int) -> str:
     @page {{ margin: 1.8cm 1.5cm; size: A4; }}
   }}
 </style>
+<script>
+window.MathJax = {{
+  tex: {{ inlineMath: [['$', '$']] }},
+  svg: {{ fontCache: 'global' }}
+}};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
 </head>
 <body>
 <h1 class="title">แบบฝึกหัดฟิสิกส์ — คลื่นกล &nbsp;({n} ข้อ)</h1>
