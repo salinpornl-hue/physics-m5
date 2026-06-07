@@ -8,7 +8,7 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
-from matplotlib.patches import FancyBboxPatch, Arc
+from matplotlib.patches import FancyBboxPatch, Arc, Rectangle
 
 import matplotlib.font_manager as fm
 
@@ -21,8 +21,6 @@ _font  = next((f for f in _THAI if f in _avail), 'DejaVu Sans')
 RC = {
     'font.family': _font,
     'axes.unicode_minus': False,
-    'figure.dpi': 110,
-    'savefig.bbox': 'tight',
 }
 
 CB   = '#1d4ed8'
@@ -32,6 +30,17 @@ CRED = '#dc2626'
 CGR  = '#475569'
 CDK  = '#0f172a'
 CBG  = '#ffffff'
+CP   = '#7c3aed'
+CY   = '#d97706'
+
+# ── helpers ───────────────────────────────────────────────────────────────────
+def _png(fig, dpi=140) -> bytes:
+    buf = _io.BytesIO()
+    fig.savefig(buf, format="png", dpi=dpi, bbox_inches="tight",
+                facecolor=fig.get_facecolor())
+    buf.seek(0)
+    plt.close(fig)
+    return buf.getvalue()
 
 # ── CSS ───────────────────────────────────────────────────────────────────────
 _CSS = """
@@ -127,25 +136,16 @@ def _cached_fig_png(func_name: str) -> bytes:
         "superposition":   _fig_superposition,
         "path_diff":       _fig_path_diff,
         "conditions":      _fig_conditions,
-        "two_sources":     _fig_two_sources,
-        "pattern":         _fig_pattern,
-        "ruler":           _fig_ruler,
         "antiphase":       _fig_antiphase,
-        "barrier":         _fig_barrier,
         "flowchart":       _fig_flowchart,
     }
-    fig = _funcs[func_name]()
-    buf = _io.BytesIO()
-    fig.savefig(buf, format="png", dpi=110, bbox_inches="tight")
-    buf.seek(0)
-    plt.close(fig)
-    return buf.getvalue()
+    return _funcs[func_name]()
 
 
 def _show(func_name: str, cap: str = ""):
     try:
         png = _cached_fig_png(func_name)
-        st.image(png, use_container_width=True)
+        st.image(_io.BytesIO(png), use_container_width=True)
         if cap:
             st.markdown(f'<p class="cap">{cap}</p>', unsafe_allow_html=True)
     except Exception as e:
@@ -153,18 +153,19 @@ def _show(func_name: str, cap: str = ""):
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-#  FIGURE 1 — การซ้อนทับของคลื่น: constructive vs destructive
+#  FIGURE 1 — Superposition: constructive vs destructive
 # ═══════════════════════════════════════════════════════════════════════════════
-def _fig_superposition():
+@st.cache_data
+def _fig_superposition() -> bytes:
     with plt.rc_context(RC):
-        fig, axes = plt.subplots(2, 3, figsize=(10, 5.2),
-                                 gridspec_kw={'hspace': 0.65, 'wspace': 0.30})
+        fig, axes = plt.subplots(2, 3, figsize=(11, 5.5),
+                                 gridspec_kw={'hspace': 0.70, 'wspace': 0.28})
         fig.patch.set_facecolor(CBG)
         x = np.linspace(0, 2, 500)
 
         configs = [
-            (0,      CG,   '#f0fdf4', 'In-phase  (Δφ = 0)',   '#bbf7d0'),
-            (np.pi,  CRED, '#fff5f5', 'Anti-phase  (Δφ = π)', '#fecaca'),
+            (0,      CG,   '#f0fdf4', 'In-phase  (Δφ = 0)',    '#bbf7d0'),
+            (np.pi,  CRED, '#fff5f5', 'Anti-phase  (Δφ = π)',  '#fecaca'),
         ]
         for row, (dphi, rcol, rbg, row_title, rfill) in enumerate(configs):
             w1  = np.sin(2 * np.pi * x)
@@ -176,58 +177,62 @@ def _fig_superposition():
                 ax.set_facecolor(rbg)
                 if col == 0:
                     y, color = w1, CB
-                    ax.set_title('Wave from S₁', fontsize=9, color=CB, fontweight='bold', pad=3)
+                    ax.set_title('Wave from S₁', fontsize=9, color=CB, fontweight='bold', pad=4)
                 elif col == 1:
                     y, color = w2, CR
-                    ax.set_title('Wave from S₂', fontsize=9, color=CR, fontweight='bold', pad=3)
+                    ax.set_title('Wave from S₂', fontsize=9, color=CR, fontweight='bold', pad=4)
                 else:
                     y, color = res, rcol
-                    ax.set_title('Resultant (surface)', fontsize=9, color=rcol, fontweight='bold', pad=3)
+                    ax.set_title('Resultant (surface)', fontsize=9, color=rcol,
+                                 fontweight='bold', pad=4)
 
-                ax.fill_between(x, y, 0, where=(y >= 0), color=rfill, alpha=0.6)
+                ax.fill_between(x, y, 0, where=(y >= 0), color=rfill, alpha=0.65)
                 ax.fill_between(x, y, 0, where=(y < 0),  color=rfill, alpha=0.25)
-                ax.plot(x, y, color=color, lw=2.2)
+                ax.plot(x, y, color=color, lw=2.4)
                 ax.axhline(0, color='#94a3b8', lw=0.7, ls=':')
-                ax.set_xlim(0, 2); ax.set_ylim(-2.5, 2.5)
+                ax.set_xlim(0, 2); ax.set_ylim(-2.6, 2.6)
                 ax.set_xticks([0, 0.5, 1, 1.5, 2])
-                ax.set_xticklabels(['0', 'λ/2', 'λ', '3λ/2', '2λ'], fontsize=7.5)
+                ax.set_xticklabels(['0', 'λ/2', 'λ', '3λ/2', '2λ'], fontsize=8)
                 ax.set_yticks([-2, -1, 0, 1, 2])
-                ax.set_yticklabels(['-2A', '-A', '0', '+A', '+2A'], fontsize=7.5)
+                ax.set_yticklabels(['-2A', '-A', '0', '+A', '+2A'], fontsize=8)
                 ax.spines[['top', 'right']].set_visible(False)
+                ax.spines[['left', 'bottom']].set_color('#e2e8f0')
+                ax.tick_params(colors=CGR)
 
                 if col == 2:
-                    amax = np.max(np.abs(res))
-                    label = f'Amplitude = {amax:.0f}A' if amax > 0.1 else 'Amplitude = 0\n(still water)'
+                    amax  = np.max(np.abs(res))
+                    label = (f'Amplitude = {amax:.0f}A'
+                             if amax > 0.1 else 'Amplitude = 0\n(still water)')
                     ax.text(0.97, 0.92, label, transform=ax.transAxes,
-                            ha='right', va='top', fontsize=8.5,
-                            fontweight='bold', color=rcol,
+                            ha='right', va='top', fontsize=9, fontweight='bold',
+                            color=rcol,
                             bbox=dict(boxstyle='round,pad=0.3',
                                       fc='#f0fdf4' if rcol == CG else '#fef2f2',
-                                      ec=rcol, lw=1.5))
+                                      ec=rcol, lw=1.8))
 
-            axes[row, 0].set_ylabel(row_title, fontsize=8.5,
-                                    color=rcol, fontweight='800', labelpad=5)
+            axes[row, 0].set_ylabel(row_title, fontsize=9,
+                                    color=rcol, fontweight='800', labelpad=6)
 
-        # เครื่องหมาย + และ =
         for row in range(2):
             y_pos = 0.76 - row * 0.44
             fig.text(0.368, y_pos, '+', ha='center', va='center',
-                     fontsize=16, color=CGR, fontweight='bold')
+                     fontsize=18, color=CGR, fontweight='bold')
             fig.text(0.638, y_pos, '=', ha='center', va='center',
-                     fontsize=16, color=configs[row][1], fontweight='bold')
+                     fontsize=18, color=configs[row][1], fontweight='bold')
 
-        fig.suptitle('Superposition Principle — fixed point on the water surface',
+        fig.suptitle('Superposition Principle — at a fixed point on the water surface',
                      fontsize=11, fontweight='bold', color=CDK, y=1.01)
         fig.tight_layout()
-    return fig
+    return _png(fig)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-#  FIGURE 2 — ผลต่างเส้นทาง Δr geometry
+#  FIGURE 2 — Path difference Δr geometry
 # ═══════════════════════════════════════════════════════════════════════════════
-def _fig_path_diff():
+@st.cache_data
+def _fig_path_diff() -> bytes:
     with plt.rc_context(RC):
-        fig, ax = plt.subplots(figsize=(8, 5.0))
+        fig, ax = plt.subplots(figsize=(9, 5.2))
         ax.set_facecolor('#f0f6ff')
         fig.patch.set_facecolor('#f0f6ff')
         ax.axis('off')
@@ -242,166 +247,171 @@ def _fig_path_diff():
         r2  = np.linalg.norm(P - s2)
         dr  = abs(r1 - r2)
 
-        # วงหน้าคลื่นจาก S1, S2
+        # wavefronts
         for src, col in [(s1, CB), (s2, CR)]:
             for n in range(1, 8):
                 r     = n * lam
-                alpha = max(0.06, 0.50 - n * 0.06)
-                lw_r  = 1.4 if n % 2 != 0 else 0.8
-                c = plt.Circle(src, r, color=col, fill=False,
-                               lw=lw_r, alpha=alpha, zorder=2)
-                ax.add_patch(c)
+                alpha = max(0.06, 0.52 - n * 0.06)
+                lw_r  = 1.6 if n % 2 != 0 else 0.8
+                ax.add_patch(plt.Circle(src, r, color=col, fill=False,
+                                        lw=lw_r, alpha=alpha, zorder=2))
 
-        # เส้นประตามเส้นทาง
-        ax.plot([s1[0], P[0]], [s1[1], P[1]], '--', color=CB, lw=1.0, alpha=0.4, zorder=3)
-        ax.plot([s2[0], P[0]], [s2[1], P[1]], '--', color=CR, lw=1.0, alpha=0.4, zorder=3)
+        # wave path lines
+        ax.plot([s1[0], P[0]], [s1[1], P[1]], '--', color=CB, lw=0.9, alpha=0.4, zorder=3)
+        ax.plot([s2[0], P[0]], [s2[1], P[1]], '--', color=CR, lw=0.9, alpha=0.4, zorder=3)
 
-        # วาดคลื่นไซน์ตามเส้นทาง
-        def draw_wave(src, dst, lam, color, amp=0.22, lw=2.2):
+        def draw_wave(src, dst, lam, color, amp=0.22, lw=2.4):
             vec  = dst - src
             dist = np.linalg.norm(vec)
             u    = vec / dist
             n    = np.array([-u[1], u[0]])
-            t    = np.linspace(0, dist, 500)
+            t    = np.linspace(0, dist, 600)
             osc  = amp * np.sin(2 * np.pi * t / lam)
-            pts  = np.array([src + t[i]*u + osc[i]*n for i in range(500)])
+            pts  = np.array([src + t[i]*u + osc[i]*n for i in range(600)])
             ax.plot(pts[:,0], pts[:,1], color=color, lw=lw,
                     solid_capstyle='round', zorder=5)
 
         draw_wave(s1, P, lam, CB)
         draw_wave(s2, P, lam, CR)
 
-        # Source markers
+        # sources
         for src, col, lbl in [(s1, CB, 'S₁'), (s2, CR, 'S₂')]:
-            ax.plot(*src, 'o', color=col, ms=12, zorder=7,
-                    markeredgecolor='white', markeredgewidth=1.6)
-            ax.text(src[0]-0.35, src[1], lbl, color=col,
-                    fontsize=12, fontweight='bold', ha='right', va='center')
+            ax.plot(*src, 'o', color=col, ms=13, zorder=7,
+                    markeredgecolor='white', markeredgewidth=1.8)
+            ax.text(src[0]-0.38, src[1], lbl, color=col,
+                    fontsize=13, fontweight='bold', ha='right', va='center')
 
-        # P marker
-        ax.plot(*P, 's', color=CG, ms=12, zorder=7,
-                markeredgecolor='white', markeredgewidth=1.6)
-        ax.text(P[0]+0.22, P[1]+0.22, 'P', color=CG,
-                fontsize=13, fontweight='bold')
+        ax.plot(*P, 's', color=CG, ms=13, zorder=7,
+                markeredgecolor='white', markeredgewidth=1.8)
+        ax.text(P[0]+0.22, P[1]+0.25, 'P', color=CG,
+                fontsize=14, fontweight='bold')
 
-        # label r1, r2
         def label_path(src, dst, txt, color, side=1):
             vec  = dst - src
             dist = np.linalg.norm(vec)
             u    = vec / dist
             n    = np.array([-u[1], u[0]])
             mid  = src + 0.50 * vec
-            off  = mid + side * 0.50 * n
+            off  = mid + side * 0.55 * n
             ang  = np.degrees(np.arctan2(vec[1], vec[0]))
             ax.text(off[0], off[1], txt, color=color, fontsize=9,
                     rotation=ang, ha='center', va='center', fontweight='700',
                     bbox=dict(fc='#f0f6ff', ec='none', pad=1.5, alpha=0.85),
                     zorder=8)
 
-        label_path(s1, P, f'r₁ = {r1:.1f} cm', CB, side=+1)
-        label_path(s2, P, f'r₂ = {r2:.1f} cm', CR, side=-1)
+        label_path(s1, P, f'r₁ = {r1:.2f} cm', CB, side=+1)
+        label_path(s2, P, f'r₂ = {r2:.2f} cm', CR, side=-1)
 
-        # d annotation
-        ax.annotate('', xy=(s1[0]-0.35, s1[1]),
-                    xytext=(s1[0]-0.35, s2[1]),
-                    arrowprops=dict(arrowstyle='<->', color=CGR, lw=1.3))
-        ax.text(s1[0]-0.65, (s1[1]+s2[1])/2,
-                f'd={abs(s1[1]-s2[1]):.1f}', color=CGR,
-                fontsize=8, ha='right', va='center')
+        ax.annotate('', xy=(s1[0]-0.38, s1[1]),
+                    xytext=(s1[0]-0.38, s2[1]),
+                    arrowprops=dict(arrowstyle='<->', color=CGR, lw=1.4))
+        ax.text(s1[0]-0.72, (s1[1]+s2[1])/2,
+                f'd = {abs(s1[1]-s2[1]):.1f}', color=CGR,
+                fontsize=8.5, ha='right', va='center')
 
-        # Δr callout
-        ax.text(4.8, 5.70,
+        ax.text(4.8, 5.72,
                 f'Δr = |r₁ − r₂| = {dr:.2f} cm',
-                fontsize=12, ha='center', fontweight='bold', color='#78350f',
-                bbox=dict(boxstyle='round,pad=0.45', fc='#fef3c7',
-                          ec='#f59e0b', lw=2.0), zorder=9)
+                fontsize=12.5, ha='center', fontweight='bold', color='#78350f',
+                bbox=dict(boxstyle='round,pad=0.5', fc='#fef3c7',
+                          ec='#f59e0b', lw=2.2), zorder=9)
 
-        ax.set_title('Path difference Δr = difference in distance from S₁ and S₂ to point P',
-                     fontsize=9.5, color=CDK, pad=6)
+        ax.set_title('Path difference Δr = |r₁ − r₂| — the extra distance one wave travels',
+                     fontsize=10, color=CDK, pad=6)
         fig.tight_layout(pad=0.5)
-    return fig
+    return _png(fig)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-#  FIGURE 3 — เงื่อนไขปฏิบัพและบัพ (2 panels)
+#  FIGURE 3 — Conditions: antinode vs node (2 panels)
 # ═══════════════════════════════════════════════════════════════════════════════
-def _fig_conditions():
+@st.cache_data
+def _fig_conditions() -> bytes:
     with plt.rc_context(RC):
-        fig, axes = plt.subplots(1, 2, figsize=(9, 3.4))
+        fig, axes = plt.subplots(1, 2, figsize=(10, 3.6))
         fig.patch.set_facecolor(CBG)
 
         panels = [
             (CG,   '#f0fdf4', '#bbf7d0',
              'Antinode — Constructive',
-             r'$\Delta r = n\lambda$',
-             r'$n = 0,\ 1,\ 2,\ 3,\ \ldots$',
+             'Δr = nλ',
+             'n = 0,  1,  2,  3,  …',
              'Amplitude = 2A',
-             'crest + crest'),
+             '(crest + crest)'),
             (CRED, '#fef2f2', '#fecaca',
              'Node — Destructive',
-             r'$\Delta r = (n - \frac{1}{2})\,\lambda$',
-             r'$n = 1,\ 2,\ 3,\ \ldots$',
+             'Δr = (n − ½)λ',
+             'n = 1,  2,  3,  …',
              'Amplitude = 0',
-             'crest + trough'),
+             '(crest + trough)'),
         ]
         for ax, (col, fc, hc, title, f1, f2, result, sub) in zip(axes, panels):
             ax.set_facecolor(fc)
             ax.set_xlim(0, 1); ax.set_ylim(0, 1); ax.axis('off')
-            for sp in ['top','bottom','left','right']:
+            for sp in ['top', 'bottom', 'left', 'right']:
                 ax.spines[sp].set_visible(True)
                 ax.spines[sp].set_edgecolor(col)
-                ax.spines[sp].set_linewidth(2.2)
+                ax.spines[sp].set_linewidth(2.5)
 
             hbar = FancyBboxPatch((0, 0.82), 1, 0.18, boxstyle='square',
                                   fc=hc, ec='none',
                                   transform=ax.transAxes, clip_on=False)
             ax.add_patch(hbar)
             ax.text(0.5, 0.91, title, transform=ax.transAxes,
-                    ha='center', va='center', fontsize=10,
-                    fontweight='800', color=col)
-
-            ax.text(0.5, 0.64, f1, transform=ax.transAxes,
-                    ha='center', va='center', fontsize=14)
-            ax.text(0.5, 0.44, f2, transform=ax.transAxes,
-                    ha='center', va='center', fontsize=10.5)
-            ax.text(0.5, 0.25, result, transform=ax.transAxes,
                     ha='center', va='center', fontsize=11,
                     fontweight='800', color=col)
-            ax.text(0.5, 0.09, f'({sub})', transform=ax.transAxes,
-                    ha='center', va='center', fontsize=8.5,
+
+            ax.text(0.5, 0.63, f1, transform=ax.transAxes,
+                    ha='center', va='center', fontsize=15,
+                    fontweight='700', color=col,
+                    fontfamily='monospace')
+            ax.text(0.5, 0.44, f2, transform=ax.transAxes,
+                    ha='center', va='center', fontsize=10.5, color=CDK)
+            ax.text(0.5, 0.26, result, transform=ax.transAxes,
+                    ha='center', va='center', fontsize=12,
+                    fontweight='800', color=col)
+            ax.text(0.5, 0.10, sub, transform=ax.transAxes,
+                    ha='center', va='center', fontsize=9,
                     color=col, style='italic')
 
         fig.suptitle('Interference Conditions  (in-phase sources)',
-                     fontsize=10, color=CGR, y=1.02)
-        fig.tight_layout(pad=0.8)
-    return fig
+                     fontsize=11, color=CGR, y=1.02, fontweight='700')
+        fig.tight_layout(pad=0.9)
+    return _png(fig)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-#  FIGURE 4 — แบบแผนการแทรกสอด (top view + lines)
+#  FIGURE 4 — Two-sources interactive pattern
 # ═══════════════════════════════════════════════════════════════════════════════
-def _fig_two_sources():
+@st.cache_data
+def _fig_two_sources(d: float = 5.0, lam: float = 2.0) -> bytes:
+    """Top-view ripple pattern for given d and λ. Equal-aspect with matched figsize."""
+    n_max = int(d / lam)
+
     with plt.rc_context(RC):
-        fig, ax = plt.subplots(figsize=(7, 5.5))
+        # Data extent: xlim=(-R,R), ylim=(-R*0.9, R*0.9) → use matching figsize
+        R_MAX = max(d * 1.8, 8.0)
+        data_w = 2 * R_MAX * 1.12   # include label room
+        data_h = 2 * R_MAX * 0.95
+        scale  = 8.0 / data_w       # target fig width ~ 8 inches
+        fw = 8.0
+        fh = max(5.0, fw * data_h / data_w)
+
+        fig, ax = plt.subplots(figsize=(fw, fh))
         ax.set_aspect('equal')
         ax.set_facecolor('#f0f7ff')
         fig.patch.set_facecolor('#f0f7ff')
 
-        lam   = 2.0
-        s1    = np.array([0.0,  2.5])
-        s2    = np.array([0.0, -2.5])
-        d     = np.linalg.norm(s1 - s2)
-        R_MAX = 8.0
-        n_rings = int(R_MAX / lam) + 1
+        s1 = np.array([0.0,  d/2])
+        s2 = np.array([0.0, -d/2])
 
+        n_rings = int(R_MAX / lam) + 2
         for n in range(1, n_rings + 1):
             for src, col in [(s1, CB), (s2, CR)]:
                 ax.add_patch(plt.Circle(src, n*lam, color=col, fill=False,
-                                        lw=1.5, alpha=0.65, zorder=3))
+                                        lw=1.5, alpha=max(0.05, 0.6 - n*0.055), zorder=3))
                 ax.add_patch(plt.Circle(src, (n-0.5)*lam, color=col, fill=False,
-                                        lw=0.6, alpha=0.25, ls='--', zorder=2))
-
-        n_max = int(d / lam)
+                                        lw=0.6, alpha=max(0.03, 0.25 - n*0.025),
+                                        ls='--', zorder=2))
 
         # antinodal lines
         for n in range(-n_max, n_max + 1):
@@ -409,16 +419,15 @@ def _fig_two_sources():
             if abs(v) > 1: continue
             th   = np.arcsin(v)
             cos_ = np.cos(th); sin_ = np.sin(th)
+            lw   = 2.4 if n == 0 else 1.8
             ax.plot([-R_MAX*cos_, R_MAX*cos_], [-R_MAX*sin_, R_MAX*sin_],
-                    color=CG, lw=2.2 if n==0 else 1.5, alpha=0.9, zorder=4)
+                    color=CG, lw=lw, alpha=0.92, zorder=4)
             lbl = 'A₀' if n == 0 else f'A{abs(n)}'
-            ax.text(R_MAX*cos_*1.05, R_MAX*sin_*1.05, lbl,
-                    color=CG, fontsize=8, fontweight='bold',
-                    ha='center', va='center')
+            ax.text(R_MAX*cos_*1.07, R_MAX*sin_*1.07, lbl,
+                    color=CG, fontsize=8.5, fontweight='bold', ha='center', va='center')
             if n != 0:
-                ax.text(-R_MAX*cos_*1.05, -R_MAX*sin_*1.05, lbl,
-                        color=CG, fontsize=8, fontweight='bold',
-                        ha='center', va='center')
+                ax.text(-R_MAX*cos_*1.07, -R_MAX*sin_*1.07, lbl,
+                        color=CG, fontsize=8.5, fontweight='bold', ha='center', va='center')
 
         # nodal lines
         for n in range(1, n_max + 1):
@@ -428,24 +437,23 @@ def _fig_two_sources():
                 th   = np.arcsin(sign * v)
                 cos_ = np.cos(th); sin_ = np.sin(th)
                 ax.plot([-R_MAX*cos_, R_MAX*cos_], [-R_MAX*sin_, R_MAX*sin_],
-                        color=CRED, lw=1.0, ls='--', alpha=0.7, zorder=4)
-                ax.text(R_MAX*cos_*1.05, R_MAX*sin_*1.05, f'N{n}',
-                        color=CRED, fontsize=7.5, ha='center', va='center')
-                ax.text(-R_MAX*cos_*1.05, -R_MAX*sin_*1.05, f'N{n}',
-                        color=CRED, fontsize=7.5, ha='center', va='center')
+                        color=CRED, lw=1.1, ls='--', alpha=0.72, zorder=4)
+                ax.text(R_MAX*cos_*1.07, R_MAX*sin_*1.07, f'N{n}',
+                        color=CRED, fontsize=8, ha='center', va='center')
+                ax.text(-R_MAX*cos_*1.07, -R_MAX*sin_*1.07, f'N{n}',
+                        color=CRED, fontsize=8, ha='center', va='center')
 
-        # Sources
+        # sources
         for src, col, lbl in [(s1, CB, 'S₁'), (s2, CR, 'S₂')]:
-            ax.plot(*src, 'o', color=col, ms=11, zorder=8,
-                    markeredgecolor='white', markeredgewidth=1.6)
-            ax.text(src[0]-0.4, src[1], lbl, color=col,
+            ax.plot(*src, 'o', color=col, ms=12, zorder=8,
+                    markeredgecolor='white', markeredgewidth=1.8)
+            ax.text(src[0]-0.45, src[1], lbl, color=col,
                     fontsize=12, fontweight='bold', ha='right', va='center')
 
-        # d annotation
-        ax.annotate('', xy=(-0.55, s1[1]), xytext=(-0.55, s2[1]),
-                    arrowprops=dict(arrowstyle='<->', color=CGR, lw=1.3))
-        ax.text(-0.85, 0, f'd={int(d)}cm', color=CGR,
-                fontsize=8.5, ha='center', va='center', rotation=90)
+        ax.annotate('', xy=(-0.60, s1[1]), xytext=(-0.60, s2[1]),
+                    arrowprops=dict(arrowstyle='<->', color=CGR, lw=1.4))
+        ax.text(-1.0, 0, f'd={d:.4g}', color=CGR,
+                fontsize=9, ha='center', va='center', rotation=90)
 
         h1 = mpatches.Patch(color=CG,   label=f'Antinodal lines ({2*n_max+1})')
         h2 = mpatches.Patch(color=CRED, label=f'Nodal lines ({2*n_max})',
@@ -454,189 +462,124 @@ def _fig_two_sources():
                              edgecolor=CB, label='Wavefront from S₁')
         l2 = mpatches.Patch(color=CR, fill=False, linewidth=1.4,
                              edgecolor=CR, label='Wavefront from S₂')
-        ax.legend(handles=[l1, l2, h1, h2], fontsize=7.5,
+        ax.legend(handles=[l1, l2, h1, h2], fontsize=8,
                   loc='lower right', framealpha=0.92, edgecolor='#e2e8f0')
 
-        ax.set_xlim(-9, 9); ax.set_ylim(-8.5, 8.5)
-        ax.set_xlabel('x (cm)', fontsize=9, color=CGR)
-        ax.set_ylabel('y (cm)', fontsize=9, color=CGR)
-        ax.tick_params(labelsize=7.5)
-        ax.set_title(f'd = {int(d)} cm,  λ = {int(lam)} cm  →  '
+        ax.set_xlim(-R_MAX*1.10, R_MAX*1.10)
+        ax.set_ylim(-R_MAX*0.95, R_MAX*0.95)
+        ax.set_xlabel('x (cm)', fontsize=9.5, color=CGR)
+        ax.set_ylabel('y (cm)', fontsize=9.5, color=CGR)
+        ax.tick_params(labelsize=8, colors=CGR)
+        ax.spines[['top','right']].set_visible(False)
+        ax.spines[['left','bottom']].set_color('#e2e8f0')
+        ax.set_title(f'd = {d:.4g} cm,  λ = {lam:.4g} cm  →  '
                      f'Antinodal: {2*n_max+1} lines,  Nodal: {2*n_max} lines',
-                     fontsize=9, color=CDK, pad=5)
-        ax.spines[['top','right']].set_visible(False)
+                     fontsize=10, color=CDK, pad=5, fontweight='700')
         fig.tight_layout()
-    return fig
+    return _png(fig)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-#  FIGURE 5 — แนวปฏิบัพ/บัพ แบบเต็ม (full pattern)
+#  FIGURE 5 — S1S2 ruler: positions of nodes/antinodes
 # ═══════════════════════════════════════════════════════════════════════════════
-def _fig_pattern():
+@st.cache_data
+def _fig_ruler(d: float = 10.0, lam: float = 2.0) -> bytes:
     with plt.rc_context(RC):
-        fig, ax = plt.subplots(figsize=(8, 6))
-        ax.set_facecolor('#f8fafc')
-        fig.patch.set_facecolor('#f8fafc')
-        ax.set_aspect('equal')
-
-        d   = 10.0; lam = 2.5
-        s1  = np.array([0.0,  d/2])
-        s2  = np.array([0.0, -d/2])
-        n_max = int(d / lam)
-        R_MAX = 18
-
-        for src, col in [(s1, CB), (s2, CR)]:
-            for n in range(1, 9):
-                ax.add_patch(plt.Circle(src, n*lam, color=col, fill=False,
-                                        lw=0.8, alpha=0.16, zorder=1))
-
-        for n in range(-n_max, n_max + 1):
-            v = n * lam / d
-            if abs(v) > 1: continue
-            th   = np.arcsin(v)
-            cos_ = np.cos(th); sin_ = np.sin(th)
-            ax.plot([-R_MAX*cos_, R_MAX*cos_], [-R_MAX*sin_, R_MAX*sin_],
-                    color=CG, lw=2.2 if n==0 else 1.6, alpha=0.9, zorder=4)
-            lbl = 'A₀' if n == 0 else f'A{abs(n)}'
-            ax.text(R_MAX*cos_*1.04, R_MAX*sin_*1.04, lbl,
-                    color=CG, fontsize=8.5, fontweight='bold',
-                    ha='center', va='center')
-            if n != 0:
-                ax.text(-R_MAX*cos_*1.04, -R_MAX*sin_*1.04, lbl,
-                        color=CG, fontsize=8.5, fontweight='bold',
-                        ha='center', va='center')
-
-        for n in range(1, n_max + 1):
-            for sign in [1, -1]:
-                v = (n - 0.5) * lam / d
-                if abs(v) > 1: continue
-                th   = np.arcsin(sign * v)
-                cos_ = np.cos(th); sin_ = np.sin(th)
-                ax.plot([-R_MAX*cos_, R_MAX*cos_], [-R_MAX*sin_, R_MAX*sin_],
-                        color=CRED, lw=1.2, ls='--', alpha=0.75, zorder=3)
-                ax.text(R_MAX*cos_*1.04, R_MAX*sin_*1.04, f'N{n}',
-                        color=CRED, fontsize=8, ha='center', va='center')
-                ax.text(-R_MAX*cos_*1.04, -R_MAX*sin_*1.04, f'N{n}',
-                        color=CRED, fontsize=8, ha='center', va='center')
-
-        for src, col, lbl in [(s1, CB, 'S₁'), (s2, CR, 'S₂')]:
-            ax.plot(*src, 'o', color=col, ms=11, zorder=8,
-                    markeredgecolor='white', markeredgewidth=1.8)
-            ax.text(src[0]-0.55, src[1], lbl, color=col,
-                    fontsize=11, fontweight='bold', va='center')
-
-        ax.annotate('', xy=(-0.65, s1[1]), xytext=(-0.65, s2[1]),
-                    arrowprops=dict(arrowstyle='<->', color=CGR, lw=1.4))
-        ax.text(-1.25, 0, f'd={int(d)} cm', color=CGR,
-                fontsize=8, ha='center', va='center', rotation=90)
-        ax.axhline(0, color=CGR, lw=0.7, ls=':', alpha=0.5)
-
-        h1 = mpatches.Patch(color=CG,   label=f'Antinodal lines ({2*n_max+1})')
-        h2 = mpatches.Patch(color=CRED, label=f'Nodal lines ({2*n_max})',
-                             fill=False, linestyle='--', edgecolor=CRED)
-        ax.legend(handles=[h1, h2], fontsize=8.5, loc='lower right',
-                  framealpha=0.95, edgecolor='#e2e8f0')
-
-        ax.set_xlim(-20, 20); ax.set_ylim(-12, 12)
-        ax.set_xlabel('x (cm)', fontsize=9)
-        ax.set_ylabel('y (cm)', fontsize=9)
-        ax.set_title(f'd = {int(d)} cm,  λ = {lam} cm  →  '
-                     f'Antinodal {2*n_max+1} lines,  Nodal {2*n_max} lines',
-                     fontsize=9.5, fontweight='600', color=CDK)
-        ax.spines[['top','right']].set_visible(False)
-        fig.tight_layout()
-    return fig
-
-
-# ═══════════════════════════════════════════════════════════════════════════════
-#  FIGURE 6 — ไม้บรรทัด S1S2 แสดงตำแหน่งบัพ/ปฏิบัพ
-# ═══════════════════════════════════════════════════════════════════════════════
-def _fig_ruler():
-    with plt.rc_context(RC):
-        fig, ax = plt.subplots(figsize=(10, 4.2))
+        fig, ax = plt.subplots(figsize=(11, 4.5))
         ax.set_facecolor(CBG)
         fig.patch.set_facecolor(CBG)
-        d = 10.0; lam = 2.0
-        ax.set_xlim(-0.6, 11.5); ax.set_ylim(-2.8, 3.0)
+        n0 = int(d / lam)
+        ax.set_xlim(-0.6, d + 1.2)
+        ax.set_ylim(-2.8, 3.2)
         ax.axis('off')
 
-        ax.plot([-0.1, 10.3], [0, 0], color=CDK, lw=2.2,
+        # axis line
+        ax.plot([-0.1, d + 0.4], [0, 0], color=CDK, lw=2.4,
                 solid_capstyle='round', zorder=5)
 
-        for xi in range(0, 11):
-            ax.plot([xi, xi], [-0.16, 0.16], color=CGR, lw=0.9)
-            ax.text(xi, -0.36, str(xi), ha='center', fontsize=7.5, color=CGR)
-        ax.text(5, -0.65, 'Position along S₁S₂ (cm)',
-                ha='center', fontsize=8.5, color=CGR)
+        # tick marks
+        for xi in np.arange(0, d + 0.01, 0.5):
+            ax.plot([xi, xi], [-0.18, 0.18], color=CGR, lw=0.9)
+        for xi in range(int(d) + 1):
+            ax.text(xi, -0.40, str(xi), ha='center', fontsize=8, color=CGR)
+        ax.text(d/2, -0.72, 'Position along S₁–S₂ line  (cm)',
+                ha='center', fontsize=9, color=CGR)
 
-        for xp, col, lbl in [(0, CB, 'S₁'), (10, CR, 'S₂')]:
-            ax.plot(xp, 0, 'o', color=col, ms=14, zorder=7,
-                    markeredgecolor='white', markeredgewidth=2)
-            ax.text(xp, 0.50, lbl, ha='center', fontsize=11,
+        # source markers
+        for xp, col, lbl in [(0, CB, 'S₁'), (d, CR, 'S₂')]:
+            ax.plot(xp, 0, 'o', color=col, ms=15, zorder=7,
+                    markeredgecolor='white', markeredgewidth=2.2)
+            ax.text(xp, 0.55, lbl, ha='center', fontsize=12,
                     color=col, fontweight='bold')
 
-        for xi in np.arange(0.0, d + 0.001, 0.5):
-            r1 = xi; r2 = d - xi; dr = abs(r1 - r2)
+        # plot antinodal / nodal positions
+        for xi in np.arange(0.0, d + 0.001, 0.5 * lam / int(max(1, 1/0.5))):
+            step = lam * 0.25
+        for xi in np.linspace(0, d, 2001):
+            r1 = xi; r2 = d - xi
+            dr = abs(r1 - r2)
             k  = dr / lam
-            is_anti = abs(k - round(k)) < 0.01
-            is_node = abs((k + 0.5) - round(k + 0.5)) < 0.01
+            is_anti = abs(k - round(k)) < 0.02
+            is_node = abs((k + 0.5) - round(k + 0.5)) < 0.02
 
             if is_anti:
                 n = int(round(k))
-                ax.plot(xi, 0, 'D', color=CG, ms=10, zorder=8,
-                        markeredgecolor='white', markeredgewidth=1.3)
-                ax.text(xi, 1.05, f'A{n}', ha='center', fontsize=8,
+                ax.plot(xi, 0, 'D', color=CG, ms=11, zorder=8,
+                        markeredgecolor='white', markeredgewidth=1.5)
+                ax.text(xi, 1.10, f'A{n}', ha='center', fontsize=9,
                         color=CG, fontweight='bold')
-                ax.text(xi, 0.58, f'Δr={int(dr)}λ' if dr > 0 else 'Δr=0',
-                        ha='center', fontsize=6.5, color=CG)
-                ax.plot([xi, xi], [0.15, 0.52], color=CG, lw=0.7, alpha=0.5)
+                ax.text(xi, 0.62, f'Δr={n}λ' if n > 0 else 'Δr=0',
+                        ha='center', fontsize=7, color=CG)
+                ax.plot([xi, xi], [0.18, 0.55], color=CG, lw=0.8, alpha=0.5)
 
             elif is_node:
                 n = int(round(k + 0.5))
-                ax.plot(xi, 0, 'v', color=CRED, ms=9, zorder=8,
-                        markeredgecolor='white', markeredgewidth=1.3)
-                ax.text(xi, -1.05, f'N{n}', ha='center', fontsize=8,
+                ax.plot(xi, 0, 'v', color=CRED, ms=10, zorder=8,
+                        markeredgecolor='white', markeredgewidth=1.5)
+                ax.text(xi, -1.05, f'N{n}', ha='center', fontsize=9,
                         color=CRED, fontweight='bold')
-                ax.text(xi, -1.55, f'Δr={int(dr*2)//2}·λ/2',
-                        ha='center', fontsize=6.5, color=CRED)
-                ax.plot([xi, xi], [-0.15, -0.52], color=CRED, lw=0.7, alpha=0.5)
+                frac = int(2*round(k+0.5)) - 1
+                ax.text(xi, -1.60, f'Δr={frac}λ/2',
+                        ha='center', fontsize=7, color=CRED)
+                ax.plot([xi, xi], [-0.18, -0.55], color=CRED, lw=0.8, alpha=0.5)
 
-        ax.text(5.0, 2.70,
-                f'd = {int(d)} cm,  λ = {int(lam)} cm  →  '
-                f'Antinodal {int(d/lam)*2+1} lines,  Nodal {int(d/lam)*2} lines',
-                ha='center', fontsize=10, fontweight='700', color=CDK,
-                bbox=dict(boxstyle='round,pad=0.35', fc='#f1f5f9',
-                          ec='#cbd5e1', lw=1.6))
+        ax.text(d/2, 2.90,
+                f'd = {d:.4g} cm,  λ = {lam:.4g} cm  →  '
+                f'n₀ = {n0}  →  Antinodal: {2*n0+1}  |  Nodal: {2*n0}',
+                ha='center', fontsize=10.5, fontweight='800', color=CDK,
+                bbox=dict(boxstyle='round,pad=0.4', fc='#f1f5f9',
+                          ec='#cbd5e1', lw=1.8))
 
-        h1 = mpatches.Patch(color=CG,   label='Antinode (constructive)')
-        h2 = mpatches.Patch(color=CRED, label='Node (destructive)')
-        ax.legend(handles=[h1, h2], fontsize=8.5,
+        h1 = mpatches.Patch(color=CG,   label='Antinode ◆ (constructive, Δr = nλ)')
+        h2 = mpatches.Patch(color=CRED, label='Node ▼ (destructive, Δr = (n−½)λ)')
+        ax.legend(handles=[h1, h2], fontsize=9,
                   loc='upper left', framealpha=0.95, edgecolor='#e2e8f0')
         fig.tight_layout()
-    return fig
+    return _png(fig)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-#  FIGURE 7 — แหล่งกำเนิดเฟสตรงข้าม (in-phase vs anti-phase)
+#  FIGURE 6 — In-phase vs Anti-phase comparison
 # ═══════════════════════════════════════════════════════════════════════════════
-def _fig_antiphase():
+@st.cache_data
+def _fig_antiphase() -> bytes:
     with plt.rc_context(RC):
         from matplotlib.gridspec import GridSpec
-        fig = plt.figure(figsize=(10, 6.5))
+        fig = plt.figure(figsize=(11, 6.8))
         fig.patch.set_facecolor(CBG)
         gs = GridSpec(3, 2, figure=fig,
-                      hspace=0.55, wspace=0.32,
-                      left=0.12, right=0.97, top=0.88, bottom=0.07)
+                      hspace=0.55, wspace=0.30,
+                      left=0.11, right=0.97, top=0.88, bottom=0.07)
 
         x = np.linspace(0, 2, 500)
         col_cfgs = [
-            (0,      'In-phase  (Δφ = 0)',      CG,   '#f0f7ff', '#f0fdf4', CG,
-             'Antinode\nAmplitude = 2A'),
-            (np.pi,  'Anti-phase  (Δφ = π)',   CRED, '#fff8f8', '#fff5f5', CRED,
-             'Node\nAmplitude = 0'),
+            (0,      'In-phase  (Δφ = 0)',    CG,   '#f0f7ff', '#f0fdf4', CG,
+             'Antinode  |  Amplitude = 2A'),
+            (np.pi,  'Anti-phase  (Δφ = π)', CRED, '#fff8f8', '#fff5f5', CRED,
+             'Node  |  Amplitude = 0'),
         ]
-        row_labels = ['Wave from S₁', 'Wave from S₂', 'Resultant\n(surface)']
-        row_colors = [CB, CR, CGR]
+        row_labels  = ['Wave from S₁', 'Wave from S₂', 'Resultant\n(surface)']
+        row_colors  = [CB, CR, CGR]
 
         for col_i, (src_phase, col_title, title_col,
                     bg_wave, bg_res, rcol, outcome) in enumerate(col_cfgs):
@@ -652,14 +595,15 @@ def _fig_antiphase():
                 ax.set_facecolor(bg)
 
                 if row_i == 0:
-                    ax.set_title(col_title, fontsize=9.5,
-                                 color=title_col, fontweight='800', pad=6)
+                    ax.set_title(col_title, fontsize=10.5,
+                                 color=title_col, fontweight='800', pad=7)
 
-                fill_c = ('#bbf7d0' if (row_i==2 and rcol==CG) else
-                          '#fecaca' if (row_i==2 and rcol==CRED) else '#dbeafe')
-                ax.fill_between(x, y, 0, where=(y>=0), color=fill_c, alpha=0.5)
-                ax.fill_between(x, y, 0, where=(y<0),  color=fill_c, alpha=0.2)
-                ax.plot(x, y, color=wc, lw=2.4, solid_capstyle='round')
+                fill_c = ('#bbf7d0' if (row_i==2 and rcol==CG)
+                          else '#fecaca' if (row_i==2 and rcol==CRED)
+                          else '#dbeafe')
+                ax.fill_between(x, y, 0, where=(y>=0), color=fill_c, alpha=0.55)
+                ax.fill_between(x, y, 0, where=(y<0),  color=fill_c, alpha=0.22)
+                ax.plot(x, y, color=wc, lw=2.5, solid_capstyle='round')
                 ax.axhline(0, color='#94a3b8', lw=0.8, ls=':', zorder=1)
 
                 amax = np.max(np.abs(y))
@@ -667,145 +611,127 @@ def _fig_antiphase():
                     ax.axhline( amax, color=wc, lw=0.9, ls='--', alpha=0.35)
                     ax.axhline(-amax, color=wc, lw=0.9, ls='--', alpha=0.35)
 
-                ax.set_xlim(0, 2); ax.set_ylim(-2.6, 2.6)
+                ax.set_xlim(0, 2); ax.set_ylim(-2.7, 2.7)
                 ax.set_xticks([0, 0.5, 1.0, 1.5, 2.0])
-                ax.set_xticklabels(['0','λ/2','λ','3λ/2','2λ'], fontsize=8)
+                ax.set_xticklabels(['0','λ/2','λ','3λ/2','2λ'], fontsize=8.5)
                 ax.set_yticks([-2, -1, 0, 1, 2])
-                ax.set_yticklabels(['-2A','-A','0','+A','+2A'], fontsize=8)
+                ax.set_yticklabels(['-2A','-A','0','+A','+2A'], fontsize=8.5)
                 ax.spines[['top','right']].set_visible(False)
+                ax.spines[['left','bottom']].set_color('#e2e8f0')
+                ax.tick_params(colors=CGR)
 
                 if col_i == 0:
                     ax.set_ylabel(row_labels[row_i], color=row_colors[row_i],
-                                  fontsize=9, fontweight='700', labelpad=6)
+                                  fontsize=9.5, fontweight='700', labelpad=6)
 
                 if row_i == 2:
                     badge_fc = '#dcfce7' if rcol==CG else '#fee2e2'
                     ax.text(0.97, 0.08, outcome,
                             transform=ax.transAxes, ha='right', va='bottom',
-                            fontsize=9.5, fontweight='900', color=rcol,
-                            bbox=dict(boxstyle='round,pad=0.3',
-                                      fc=badge_fc, ec=rcol, lw=2.0))
+                            fontsize=10, fontweight='900', color=rcol,
+                            bbox=dict(boxstyle='round,pad=0.35',
+                                      fc=badge_fc, ec=rcol, lw=2.2))
 
         fig.suptitle('In-phase vs Anti-phase Sources  (Δr = 0)',
-                     fontsize=11, fontweight='bold', color=CDK, y=0.96)
+                     fontsize=12, fontweight='bold', color=CDK, y=0.96)
         fig.add_artist(plt.Line2D([0.545, 0.545], [0.06, 0.92],
                                   transform=fig.transFigure,
                                   color='#e2e8f0', lw=1.5, ls='--'))
-    return fig
+    return _png(fig)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-#  FIGURE 8 — คลื่นผ่านช่องสองช่องในแผ่นกั้น (top view)
+#  FIGURE 7 — Double-slit barrier (top view)
 # ═══════════════════════════════════════════════════════════════════════════════
-def _fig_barrier():
+@st.cache_data
+def _fig_barrier(d: float = 2.4, lam: float = 0.6) -> bytes:
+    n_max = int(d / lam)
     with plt.rc_context(RC):
-        from matplotlib.patches import Rectangle, FancyArrowPatch
-        fig, ax = plt.subplots(figsize=(10, 5.8))
-        ax.set_facecolor('#f0f7ff')
-        fig.patch.set_facecolor('#f0f7ff')
-
-        # ── coordinate layout ──────────────────────────────────────────
-        X_BARRIER = 0.0
-        X_SCREEN  = 8.5
-        X_LEFT    = -4.5
-        Y_MAX     = 4.2
-
-        d   = 2.4   # slit separation
-        lam = 0.6
-        n_max = 3
-        slit_gap = 0.20   # half-width of slit opening
-
+        X_BARRIER = 0.0; X_SCREEN = 8.5; X_LEFT = -4.5; Y_MAX = 4.2
+        slit_gap  = 0.20
         s1 = np.array([X_BARRIER, +d/2])
         s2 = np.array([X_BARRIER, -d/2])
 
-        ax.set_xlim(X_LEFT - 0.2, X_SCREEN + 1.6)
-        ax.set_ylim(-Y_MAX - 0.3, Y_MAX + 0.5)
-        ax.set_aspect('equal')
+        # Figure size matched to data aspect (no set_aspect='equal')
+        fig, ax = plt.subplots(figsize=(12, 5.6))
+        ax.set_facecolor('#f0f7ff')
+        fig.patch.set_facecolor('#f0f7ff')
         ax.axis('off')
+        ax.set_xlim(X_LEFT - 0.3, X_SCREEN + 2.2)
+        ax.set_ylim(-Y_MAX - 0.3, Y_MAX + 0.6)
 
-        # ── incoming plane wavefronts (left of barrier) ────────────────
+        # incoming wavefronts
         for xi in np.arange(X_LEFT + 0.3, X_BARRIER - 0.05, lam):
-            ax.plot([xi, xi], [+d/2 + slit_gap, Y_MAX],
-                    color=CB, lw=1.2, alpha=0.45, zorder=2)
-            ax.plot([xi, xi], [-Y_MAX, -d/2 - slit_gap],
-                    color=CB, lw=1.2, alpha=0.45, zorder=2)
+            ax.plot([xi, xi], [+d/2 + slit_gap, Y_MAX], color=CB, lw=1.1, alpha=0.40, zorder=2)
+            ax.plot([xi, xi], [-Y_MAX, -d/2 - slit_gap], color=CB, lw=1.1, alpha=0.40, zorder=2)
 
-        # arrow + label for plane wave
         ax.annotate('', xy=(X_BARRIER - 0.6, 0), xytext=(X_LEFT + 0.4, 0),
-                    arrowprops=dict(arrowstyle='->', color=CB, lw=2.0,
+                    arrowprops=dict(arrowstyle='->', color=CB, lw=2.2,
                                    mutation_scale=18), zorder=9)
-        ax.text(X_LEFT + 0.1, 0.75, 'Plane wave\nentering',
-                color=CB, fontsize=8.5, ha='left', va='bottom',
-                fontweight='600', zorder=9)
+        ax.text(X_LEFT + 0.2, 0.75, 'Plane wave\nentering',
+                color=CB, fontsize=9, ha='left', va='bottom', fontweight='600')
 
-        # ── barrier ────────────────────────────────────────────────────
+        # barrier
         bw = 0.22
-        barrier_segs = [
-            (-Y_MAX,          -d/2 - slit_gap),
-            (-d/2 + slit_gap,  d/2 - slit_gap),   # mid block (between slits)
-            ( d/2 + slit_gap,  Y_MAX),
-        ]
-        for y0, y1 in barrier_segs:
+        for y0, y1 in [(-Y_MAX - 0.3, -d/2 - slit_gap),
+                        (-d/2 + slit_gap, d/2 - slit_gap),
+                        ( d/2 + slit_gap, Y_MAX + 0.4)]:
             ax.add_patch(Rectangle((X_BARRIER - bw, y0), 2*bw, y1 - y0,
                                    fc='#475569', ec='none', alpha=0.88, zorder=6))
-        ax.text(X_BARRIER - bw - 0.15, -Y_MAX + 0.1, 'Barrier',
-                color='#475569', fontsize=7.5, ha='right', va='bottom',
-                fontweight='700', zorder=9)
+        ax.text(X_BARRIER - bw - 0.18, -Y_MAX + 0.05, 'Barrier',
+                color='#475569', fontsize=8, ha='right', va='bottom', fontweight='700')
 
-        # ── slit markers (S₁ and S₂) ────────────────────────────────
+        # slit markers
         for src, col, lbl in [(s1, CB, 'S₁'), (s2, CR, 'S₂')]:
-            ax.plot(*src, 'D', color=col, ms=9, zorder=10,
-                    markeredgecolor='white', markeredgewidth=1.5)
+            ax.plot(*src, 'D', color=col, ms=10, zorder=10,
+                    markeredgecolor='white', markeredgewidth=1.7)
             ax.text(src[0] + 0.38, src[1], lbl, color=col,
-                    fontsize=9, va='center', fontweight='700', zorder=10)
+                    fontsize=10, va='center', fontweight='700', zorder=10)
 
-        # ── d annotation ───────────────────────────────────────────────
-        x_ann = X_BARRIER - 1.0
+        # d annotation
+        x_ann = X_BARRIER - 1.1
         ax.annotate('', xy=(x_ann, s1[1]), xytext=(x_ann, s2[1]),
-                    arrowprops=dict(arrowstyle='<->', color=CGR, lw=1.4))
-        ax.text(x_ann - 0.25, 0, 'd', fontsize=12, color=CDK,
+                    arrowprops=dict(arrowstyle='<->', color=CDK, lw=1.5))
+        ax.text(x_ann - 0.28, 0, 'd', fontsize=14, color=CDK,
                 ha='center', va='center', fontweight='bold')
 
-        # ── circular wavefronts from each slit ────────────────────────
+        # circular wavefronts from slits
         for src, col in [(s1, CB), (s2, CR)]:
-            for n in range(1, 18):
+            for n in range(1, 22):
                 r     = n * lam
-                alpha = max(0.05, 0.55 - n * 0.035)
-                lw_c  = 1.3 if n % 2 != 0 else 0.6
-                circ = plt.Circle(src, r, color=col, fill=False,
-                                  lw=lw_c, alpha=alpha, zorder=2)
-                ax.add_patch(circ)
+                alpha = max(0.04, 0.55 - n * 0.030)
+                lw_c  = 1.4 if n % 2 != 0 else 0.6
+                ax.add_patch(plt.Circle(src, r, color=col, fill=False,
+                                        lw=lw_c, alpha=alpha, zorder=2))
 
-        # mask — hide wavefronts left of barrier
-        ax.add_patch(Rectangle((X_LEFT - 0.5, -Y_MAX - 0.5),
-                                abs(X_LEFT) + 0.5 + bw, 2*(Y_MAX + 0.5),
+        # mask left of barrier
+        ax.add_patch(Rectangle((X_LEFT - 0.6, -Y_MAX - 0.5),
+                                abs(X_LEFT) + 0.6 + bw, 2*(Y_MAX + 0.5),
                                 fc='#f0f7ff', ec='none', zorder=3))
 
-        # ── screen ─────────────────────────────────────────────────────
-        ax.plot([X_SCREEN, X_SCREEN], [-Y_MAX, Y_MAX],
-                color='#1e293b', lw=3.5, zorder=6, solid_capstyle='round')
-        ax.text(X_SCREEN + 0.12, Y_MAX - 0.1, 'Screen',
-                color='#1e293b', fontsize=8, va='top', fontweight='600')
+        # screen
+        ax.plot([X_SCREEN]*2, [-Y_MAX, Y_MAX], color='#1e293b', lw=4.5, zorder=6,
+                solid_capstyle='round')
+        ax.text(X_SCREEN + 0.14, Y_MAX + 0.2, 'Screen', color='#1e293b',
+                fontsize=9, va='top', fontweight='700')
 
-        # ── antinodal lines → label at screen ─────────────────────────
+        # antinodal rays to screen
         for n in range(-n_max, n_max + 1):
             v = n * lam / d
             if abs(v) > 1: continue
             th   = np.arcsin(v)
             y_sc = X_SCREEN * np.tan(th)
             if abs(y_sc) > Y_MAX + 0.2: continue
-            lw_a  = 2.2 if n == 0 else 1.6
-            ax.plot([X_BARRIER, X_SCREEN], [0, y_sc],
-                    color=CG, lw=lw_a, alpha=0.85, zorder=4)
-            ax.plot(X_SCREEN, y_sc, 'o', color=CG, ms=6, zorder=7,
-                    markeredgecolor='white', markeredgewidth=1.2)
-            lbl = 'A₀  (central max)' if n == 0 else f'A{abs(n)}'
+            lw_a = 2.4 if n == 0 else 1.8
+            ax.plot([X_BARRIER, X_SCREEN], [0, y_sc], color=CG, lw=lw_a, alpha=0.88, zorder=4)
+            ax.plot(X_SCREEN, y_sc, 'o', color=CG, ms=7, zorder=7,
+                    markeredgecolor='white', markeredgewidth=1.4)
+            lbl = 'A₀  (central)' if n == 0 else f'A{abs(n)}'
             va  = 'bottom' if y_sc > 0.3 else ('top' if y_sc < -0.3 else 'center')
-            ax.text(X_SCREEN + 0.18, y_sc, lbl,
-                    color=CG, fontsize=8, fontweight='bold',
-                    va=va, ha='left', zorder=8)
+            ax.text(X_SCREEN + 0.22, y_sc, lbl, color=CG, fontsize=8.5,
+                    fontweight='bold', va=va, ha='left')
 
-        # ── nodal lines → label at screen ─────────────────────────────
+        # nodal rays to screen
         for n in range(1, n_max + 1):
             for sign in [1, -1]:
                 v = (n - 0.5) * lam / d
@@ -814,99 +740,97 @@ def _fig_barrier():
                 y_sc = X_SCREEN * np.tan(th)
                 if abs(y_sc) > Y_MAX + 0.2: continue
                 ax.plot([X_BARRIER, X_SCREEN], [0, y_sc],
-                        color=CRED, lw=1.1, ls='--', alpha=0.65, zorder=4)
-                ax.plot(X_SCREEN, y_sc, 'x', color=CRED, ms=5,
-                        markeredgewidth=1.5, zorder=7)
+                        color=CRED, lw=1.2, ls='--', alpha=0.65, zorder=4)
+                ax.plot(X_SCREEN, y_sc, 'x', color=CRED, ms=6,
+                        markeredgewidth=1.8, zorder=7)
                 va = 'bottom' if y_sc > 0.3 else ('top' if y_sc < -0.3 else 'center')
-                ax.text(X_SCREEN + 0.18, y_sc, f'N{n}',
-                        color=CRED, fontsize=7.5,
-                        va=va, ha='left', zorder=8)
+                ax.text(X_SCREEN + 0.22, y_sc, f'N{n}',
+                        color=CRED, fontsize=8, va=va, ha='left')
 
-        # ── θ₁ angle arc ───────────────────────────────────────────────
-        th1 = np.arcsin(lam / d)
-        ax.add_patch(Arc((X_BARRIER, 0), 2.8, 2.8, angle=0,
-                         theta1=0, theta2=np.degrees(th1),
-                         color='#7c3aed', lw=1.8, zorder=7))
-        ax.text(X_BARRIER + 1.7, 0.30, 'θ₁', fontsize=10,
-                color='#7c3aed', fontweight='bold', zorder=8)
+        # θ₁ arc
+        if n_max >= 1:
+            th1 = np.arcsin(lam / d)
+            ax.add_patch(Arc((X_BARRIER, 0), 3.0, 3.0, angle=0,
+                             theta1=0, theta2=np.degrees(th1),
+                             color=CP, lw=2.0, zorder=7))
+            ax.text(X_BARRIER + 1.85, 0.35, 'θ₁', fontsize=11,
+                    color=CP, fontweight='bold')
 
-        # ── L annotation (barrier → screen) ───────────────────────────
-        y_arr = -Y_MAX + 0.05
+        # L annotation
+        y_arr = -Y_MAX + 0.08
         ax.annotate('', xy=(X_SCREEN, y_arr), xytext=(X_BARRIER, y_arr),
-                    arrowprops=dict(arrowstyle='<->', color=CGR, lw=1.2,
-                                   mutation_scale=12))
-        ax.text((X_BARRIER + X_SCREEN) / 2, y_arr - 0.42,
-                'L  (distance to screen)',
-                ha='center', fontsize=8, color=CGR)
+                    arrowprops=dict(arrowstyle='<->', color=CGR, lw=1.3, mutation_scale=11))
+        ax.text((X_BARRIER + X_SCREEN) / 2, y_arr - 0.48,
+                'L  (barrier → screen distance)',
+                ha='center', fontsize=8.5, color=CGR)
 
-        # ── legend ─────────────────────────────────────────────────────
-        import matplotlib.patches as mpatches
         import matplotlib.lines as mlines
-        leg_A = mlines.Line2D([], [], color=CG,   lw=2, label='Antinodal line (constructive)')
+        leg_A = mlines.Line2D([], [], color=CG,   lw=2.2, label='Antinodal line (constructive)')
         leg_N = mlines.Line2D([], [], color=CRED, lw=1.2, ls='--', label='Nodal line (destructive)')
-        ax.legend(handles=[leg_A, leg_N], fontsize=7.5,
+        ax.legend(handles=[leg_A, leg_N], fontsize=8.5,
                   loc='upper left', framealpha=0.92, edgecolor='#e2e8f0')
 
-        ax.set_title('Top view — double-slit interference',
-                     fontsize=10, color=CDK, pad=6, fontweight='700')
+        ax.set_title(f'Top view — double-slit  (d = {d:.4g} cm, λ = {lam:.4g} cm)',
+                     fontsize=10.5, color=CDK, pad=6, fontweight='700')
         fig.tight_layout(pad=0.4)
-    return fig
+    return _png(fig)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-#  FIGURE 9 — flowchart 3 ขั้นตอน
+#  FIGURE 8 — Flowchart 3-step method
 # ═══════════════════════════════════════════════════════════════════════════════
-def _fig_flowchart():
+@st.cache_data
+def _fig_flowchart() -> bytes:
     with plt.rc_context(RC):
-        fig, ax = plt.subplots(figsize=(9.5, 2.8))
+        fig, ax = plt.subplots(figsize=(10.5, 2.9))
         ax.axis('off')
         ax.set_facecolor(CBG)
         fig.patch.set_facecolor(CBG)
-        ax.set_xlim(0, 9.5); ax.set_ylim(0, 2.8)
+        ax.set_xlim(0, 10.5); ax.set_ylim(0, 2.9)
 
         steps = [
-            (1.18, '#1e3a8a', '#eff6ff',
+            (1.22, '#1e3a8a', '#eff6ff',
              'Step 1',
-             r'$\Delta r = |r_1 - r_2|$'),
-            (3.80, '#065f46', '#f0fdf4',
+             'Δr = |r₁ − r₂|'),
+            (3.90, '#065f46', '#f0fdf4',
              'Step 2',
-             r'$k = \Delta r \;/\; \lambda$'),
-            (6.42, '#78350f', '#fefce8',
+             'k = Δr ÷ λ'),
+            (6.58, '#78350f', '#fefce8',
              'Step 3',
-             'Is k a whole\nnumber or n − ½?'),
+             'k whole no.?\nor k = n−½?'),
         ]
         for xc, bc, fc, title, body in steps:
-            ax.add_patch(FancyBboxPatch((xc-1.05, 0.38), 2.10, 2.06,
-                                        boxstyle='round,pad=0.08',
-                                        fc=fc, ec=bc, lw=2.2))
-            ax.text(xc, 2.30, title, ha='center', va='center',
-                    fontsize=9, fontweight='800', color=bc)
-            ax.text(xc, 1.42, body, ha='center', va='center', fontsize=11)
+            ax.add_patch(FancyBboxPatch((xc-1.10, 0.40), 2.20, 2.10,
+                                        boxstyle='round,pad=0.10',
+                                        fc=fc, ec=bc, lw=2.4))
+            ax.text(xc, 2.33, title, ha='center', va='center',
+                    fontsize=9.5, fontweight='800', color=bc)
+            ax.text(xc, 1.44, body, ha='center', va='center',
+                    fontsize=11.5, fontfamily='monospace', color=CDK)
 
-        for xa in [2.25, 4.87]:
-            ax.annotate('', xy=(xa+0.48, 1.42), xytext=(xa, 1.42),
-                        arrowprops=dict(arrowstyle='->',
-                                        color='#94a3b8', lw=2.0))
+        for xa in [2.34, 5.02]:
+            ax.annotate('', xy=(xa + 0.44, 1.44), xytext=(xa, 1.44),
+                        arrowprops=dict(arrowstyle='->', color='#94a3b8', lw=2.2))
 
-        ax.annotate('', xy=(7.53, 2.22), xytext=(7.47, 1.42),
-                    arrowprops=dict(arrowstyle='->', color=CG, lw=1.8))
-        ax.annotate('', xy=(7.53, 0.60), xytext=(7.47, 1.42),
-                    arrowprops=dict(arrowstyle='->', color=CRED, lw=1.8))
+        ax.annotate('', xy=(7.74, 2.24), xytext=(7.68, 1.44),
+                    arrowprops=dict(arrowstyle='->', color=CG, lw=2.0))
+        ax.annotate('', xy=(7.74, 0.62), xytext=(7.68, 1.44),
+                    arrowprops=dict(arrowstyle='->', color=CRED, lw=2.0))
 
         for yc, col, fc2, txt in [
-            (2.28,  CG,   '#dcfce7', 'k = 0,1,2,…\n→ Antinode'),
-            (0.55,  CRED, '#fee2e2', 'k = ½,1½,…\n→ Node'),
+            (2.30,  CG,   '#dcfce7', 'k = 0, 1, 2, …\n→ Antinode ✓'),
+            (0.57,  CRED, '#fee2e2', 'k = ½, 1½, …\n→ Node ✗'),
         ]:
-            ax.add_patch(FancyBboxPatch((7.56, yc-0.38), 1.85, 0.76,
-                                        boxstyle='round,pad=0.06',
-                                        fc=fc2, ec=col, lw=1.9))
-            ax.text(8.44, yc, txt, ha='center', va='center',
-                    fontsize=8.5, color=col, fontweight='700')
+            ax.add_patch(FancyBboxPatch((7.78, yc - 0.38), 2.60, 0.78,
+                                        boxstyle='round,pad=0.07',
+                                        fc=fc2, ec=col, lw=2.0))
+            ax.text(9.08, yc, txt, ha='center', va='center',
+                    fontsize=9, color=col, fontweight='800')
 
         ax.set_title('3-Step method — works for every interference problem',
-                     fontsize=9.5, color=CGR, pad=4)
+                     fontsize=10, color=CGR, pad=4, fontweight='700')
         fig.tight_layout(pad=0.3)
-    return fig
+    return _png(fig)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -923,9 +847,10 @@ def render_summary():
      Physics · Grade 11 · Mechanical Waves</p>
   <div class="hero-meta">
     <span class="hero-tag">Coherent Sources</span>
-    <span class="hero-tag">Path Difference</span>
+    <span class="hero-tag">Path Difference Δr</span>
     <span class="hero-tag">Antinodes &amp; Nodes</span>
     <span class="hero-tag">Double Slit</span>
+    <span class="hero-tag">Anti-phase</span>
   </div>
 </div>
 """, unsafe_allow_html=True)
@@ -943,21 +868,23 @@ def render_summary():
 <h4>📖 Definition</h4>
 <p>Two sources are <strong>coherent</strong> when they share:</p>
 <ul>
-  <li>The <strong>same frequency</strong></li>
-  <li>A <strong>constant phase difference</strong> (does not drift over time)</li>
+  <li>The <strong>same frequency</strong> (and wavelength)</li>
+  <li>A <strong>constant phase difference</strong> — does not drift over time</li>
 </ul>
-<p>In practice: two prongs on the same motor in a ripple tank, or two slits illuminated by one source.</p>
+<p>In practice: two prongs on the same motor in a ripple tank,
+or two slits illuminated by a single source.</p>
 </div>
 """, unsafe_allow_html=True)
     with c2:
         st.markdown("""
 <div class="card cs">
-<h4>⚡ Two Cases</h4>
+<h4>⚡ Two Phase Cases</h4>
 <ul>
-  <li><strong>In-phase</strong> (Δφ = 0) — crests leave both sources simultaneously</li>
+  <li><strong>In-phase</strong> (Δφ = 0) — crests leave both sources at the same moment</li>
   <li><strong>Anti-phase</strong> (Δφ = π) — one emits a crest while the other emits a trough</li>
 </ul>
-<p>Most problems say "in-phase." If unspecified, assume in-phase.</p>
+<p>Most problems say "in-phase." If unspecified, assume in-phase.<br>
+Anti-phase swaps every antinode↔node label — see section 07.</p>
 </div>
 """, unsafe_allow_html=True)
 
@@ -968,7 +895,8 @@ def render_summary():
                 'Superposition Principle</p>', unsafe_allow_html=True)
 
     _show("superposition",
-          "Top: crest + crest → 2A (constructive)  |  Bottom: crest + trough → 0 (destructive)")
+          "Top row: in-phase → crest + crest → amplitude 2A (constructive)  |  "
+          "Bottom row: anti-phase → crest + trough → amplitude 0 (destructive)")
 
     c1, c2 = st.columns(2, gap="large")
     with c1:
@@ -979,6 +907,7 @@ def render_summary():
   <li>Crest meets crest  <em>or</em>  trough meets trough</li>
   <li>Waves arrive <strong>in phase</strong></li>
   <li>Resultant amplitude = <strong>2A</strong>  (maximum)</li>
+  <li>The surface oscillates with double amplitude</li>
 </ul>
 </div>
 """, unsafe_allow_html=True)
@@ -989,7 +918,8 @@ def render_summary():
 <ul>
   <li>Crest meets trough</li>
   <li>Waves arrive <strong>180° out of phase</strong></li>
-  <li>Resultant amplitude = <strong>0</strong>  (surface still)</li>
+  <li>Resultant amplitude = <strong>0</strong>  (surface stays still)</li>
+  <li>Energy is not lost — it redistributes to antinodes</li>
 </ul>
 </div>
 """, unsafe_allow_html=True)
@@ -1003,69 +933,75 @@ def render_summary():
     c1, c2 = st.columns([1.4, 1], gap="large")
     with c1:
         _show("path_diff",
-              "Rings = wavefronts (crests)  ·  Curves = actual wave paths r₁ and r₂ to point P")
+              "Rings = wavefronts (crests)  ·  Sine curves = actual wave paths r₁ and r₂ to point P")
     with c2:
         st.markdown("""
 <div class="card cb">
 <h4>📐 What is Δr?</h4>
-<p>The <strong>difference in distance</strong> each wave travels to reach point P.</p>
+<p>The <strong>difference in distance</strong> each wave travels to reach point P:</p>
 </div>
 """, unsafe_allow_html=True)
         st.latex(r"\Delta r = |r_1 - r_2|")
         st.markdown("""
 <div class="card cg" style="margin-top:10px">
-<h4>✅ Antinode condition</h4>
-<p>Waves travel exactly <em>n whole wavelengths</em> apart → arrive in phase.</p>
+<h4>✅ Antinode condition (in-phase)</h4>
+<p>Waves arrive in phase → whole number of wavelengths apart.</p>
 </div>
 """, unsafe_allow_html=True)
         st.latex(r"\Delta r = n\lambda \quad (n = 0,1,2,\ldots)")
         st.markdown("""
 <div class="card cr" style="margin-top:10px">
-<h4>❌ Node condition</h4>
-<p>Waves travel a <em>half-wavelength</em> extra → arrive 180° out of phase.</p>
+<h4>❌ Node condition (in-phase)</h4>
+<p>Waves arrive 180° out of phase → half-wavelength extra.</p>
 </div>
 """, unsafe_allow_html=True)
         st.latex(r"\Delta r = \!\left(n-\tfrac{1}{2}\right)\lambda \quad (n = 1,2,3,\ldots)")
 
+    _show("conditions",
+          "Left: Δr = nλ → constructive (antinode)  ·  Right: Δr = (n−½)λ → destructive (node)  "
+          "— for in-phase sources")
+
     # ══════════════════════════════════════════════════════════════════════════
-    # 04  Interference Pattern
+    # 04  Interference Pattern — top view with interactive slider
     # ══════════════════════════════════════════════════════════════════════════
     st.markdown('<hr class="div"><p class="sh"><span class="pill">04</span>'
                 'Interference Pattern — Top View</p>', unsafe_allow_html=True)
 
-    _show("conditions",
-          "Left panel: antinodal condition  ·  Right panel: nodal condition  (in-phase sources)")
-
-    c1, c2 = st.columns(2, gap="large")
-    with c1:
-        _show("two_sources",
-              "Solid green = antinodal lines  ·  Dashed red = nodal lines  ·  d = 5 cm, λ = 2 cm")
-    with c2:
-        _show("pattern",
-              "d = 10 cm, λ = 2.5 cm  →  9 antinodal lines, 8 nodal lines")
-
     st.markdown("""
 <div class="card cb">
-<h4>🗺️ Reading the Diagram</h4>
+<h4>🗺️ Reading the Ripple Pattern</h4>
 <ul>
-  <li><strong>Blue rings</strong> = crests from S₁ &nbsp;·&nbsp; <strong>Red rings</strong> = crests from S₂</li>
+  <li><strong style="color:#1d4ed8">Blue rings</strong> = crests from S₁ &nbsp;·&nbsp;
+      <strong style="color:#b91c1c">Red rings</strong> = crests from S₂</li>
   <li>Blue meets blue → crest + crest → <span class="tg"><strong>Antinode</strong></span></li>
   <li>Blue meets red &nbsp;→ crest + trough → <span class="tr"><strong>Node</strong></span></li>
-  <li>Connecting all antinodes gives a <strong>solid antinodal line</strong> (hyperbola)</li>
-  <li>Connecting all nodes gives a <strong>dashed nodal line</strong></li>
+  <li>Connecting all antinodes/nodes traces out hyperbolic <strong>interference lines</strong></li>
 </ul>
 </div>
 """, unsafe_allow_html=True)
 
+    # Interactive pattern controls
+    col_sl1, col_sl2 = st.columns(2)
+    with col_sl1:
+        d_pat = st.slider('Source separation  d  (cm)', 2.0, 14.0, 5.0, 0.5,
+                          key='pat_d', help='Distance between S₁ and S₂')
+    with col_sl2:
+        lam_pat = st.slider('Wavelength  λ  (cm)', 0.5, 4.0, 2.0, 0.5,
+                            key='pat_lam')
+
+    n0_pat = int(d_pat / lam_pat)
+    col_res1, col_res2, col_res3 = st.columns(3)
+    col_res1.metric('n₀  =  ⌊d/λ⌋', n0_pat)
+    col_res2.metric('Antinodal lines', f'{2*n0_pat + 1}  (A₀…A{n0_pat} each side)')
+    col_res3.metric('Nodal lines', f'{2*n0_pat}  (N₁…N{n0_pat} each side)')
+
+    st.image(_io.BytesIO(_fig_two_sources(d_pat, lam_pat)), use_container_width=True)
+
     # ══════════════════════════════════════════════════════════════════════════
-    # 05  Counting Lines
+    # 05  Counting Lines — with interactive ruler
     # ══════════════════════════════════════════════════════════════════════════
     st.markdown('<hr class="div"><p class="sh"><span class="pill">05</span>'
                 'Counting Antinodal &amp; Nodal Lines</p>', unsafe_allow_html=True)
-
-    _show("ruler",
-          "◆ antinodal positions above axis  ·  ▼ nodal positions below axis  "
-          "(d = 10 cm, λ = 2 cm  →  n₀ = 5)")
 
     c1, c2 = st.columns([1, 1.1], gap="large")
     with c1:
@@ -1075,7 +1011,7 @@ def render_summary():
 </div>
 """, unsafe_allow_html=True)
         st.latex(r"n_0 = \left\lfloor \frac{d}{\lambda} \right\rfloor"
-                 r"\quad \text{(take integer part)}")
+                 r"\quad \text{(integer part — floor, never round up)}")
         st.markdown("""
 <div class="card cg" style="margin-top:10px">
 <h4>Step 2 — Count</h4>
@@ -1088,8 +1024,8 @@ def render_summary():
 <h4>📝 Example</h4>
 <p>d = 12 cm, λ = 4 cm &nbsp;→&nbsp; n₀ = <strong>3</strong></p>
 <ul>
-  <li>Antinodal lines = 2×3 + 1 = <span class="tg">7</span></li>
-  <li>Nodal lines &nbsp;&nbsp;&nbsp;&nbsp;= 2×3 &nbsp;&nbsp;&nbsp;&nbsp;= <span class="tr">6</span></li>
+  <li>Antinodal = 2×3 + 1 = <span class="tg">7 lines</span></li>
+  <li>Nodal &nbsp;&nbsp;&nbsp;= 2×3 &nbsp;&nbsp;&nbsp;= <span class="tr">6 lines</span></li>
 </ul>
 </div>
 """, unsafe_allow_html=True)
@@ -1103,7 +1039,7 @@ def render_summary():
 </tr></thead>
 <tbody>
 <tr>
-  <td>Entire S₁S₂ line</td>
+  <td>Entire line (both sides)</td>
   <td class="tg">2n₀ + 1</td>
   <td class="tr">2n₀</td>
 </tr>
@@ -1116,17 +1052,30 @@ def render_summary():
 </table>
 <p style="font-size:.78rem;color:#64748b;margin-top:8px">
   ※ Valid when d/λ is a whole number.
-  If d/λ has a remainder, count carefully using Δr conditions.
+  If d/λ has remainder, check each position using Δr conditions.
 </p>
 <div class="card cp" style="margin-top:14px">
-<h4>⚠️ Quick Check</h4>
+<h4>⚠️ Key facts to remember</h4>
 <ul>
-  <li>The central line (Δr = 0) is <strong>always an antinode</strong> for in-phase sources</li>
-  <li>Antinodal and nodal lines <strong>alternate</strong> outward from centre</li>
-  <li>Label: A₀ (centre), A₁, A₂ … and N₁, N₂ …</li>
+  <li>The central line (Δr = 0) is <strong>always A₀</strong> for in-phase sources</li>
+  <li>Lines alternate: A₀, N₁, A₁, N₂, A₂, … outward from centre</li>
+  <li>Antinodal count is always <strong>odd</strong>, nodal count always <strong>even</strong></li>
 </ul>
 </div>
 """, unsafe_allow_html=True)
+
+    # Interactive ruler slider
+    st.markdown("**🎛 Interactive ruler — drag to update:**")
+    col_r1, col_r2 = st.columns(2)
+    with col_r1:
+        d_rul = st.slider('d  (cm)', 2.0, 20.0, 10.0, 0.5, key='ruler_d')
+    with col_r2:
+        lam_rul = st.slider('λ  (cm)', 0.5, 5.0, 2.0, 0.5, key='ruler_lam')
+
+    n0_rul = int(d_rul / lam_rul)
+    st.info(f'**d/λ = {d_rul/lam_rul:.3g}** → n₀ = **{n0_rul}** → '
+            f'Antinodal: **{2*n0_rul+1}** lines | Nodal: **{2*n0_rul}** lines')
+    st.image(_io.BytesIO(_fig_ruler(d_rul, lam_rul)), use_container_width=True)
 
     # ══════════════════════════════════════════════════════════════════════════
     # 06  3-Step Method
@@ -1140,8 +1089,8 @@ def render_summary():
 <div class="keytip">
 💡 <strong>Golden rule:</strong>&nbsp;
 Compute  k = Δr ÷ λ &nbsp;—&nbsp;
-k whole number → <strong>Antinode</strong> &nbsp;·&nbsp;
-k ends in .5 → <strong>Node</strong>
+k is a <strong>whole number</strong> → <strong>Antinode</strong> &nbsp;·&nbsp;
+k ends in <strong>.5</strong> → <strong>Node</strong>
 </div>
 """, unsafe_allow_html=True)
 
@@ -1185,7 +1134,7 @@ k ends in .5 → <strong>Node</strong>
         st.markdown("""
 <div class="card cr">
 <h4>⚠️ Conditions Are Swapped</h4>
-<p>Anti-phase sources start 180° apart, so every Δr condition flips.</p>
+<p>Anti-phase sources start 180° apart, so every Δr condition flips:</p>
 </div>
 """, unsafe_allow_html=True)
         st.markdown("""
@@ -1204,33 +1153,44 @@ k ends in .5 → <strong>Node</strong>
     with c2:
         st.markdown("""
 <div class="card cy">
-<h4>💡 Intuition</h4>
-<p>The source phase shift of 180° acts like an extra Δr = λ/2:</p>
+<h4>💡 Why the swap?</h4>
+<p>The 180° source phase shift acts like an extra Δr = λ/2 of path:</p>
 <ul>
-  <li>Δr = 0 → phase gap from path = 0° → add 180° from source → total <strong>180°</strong> → <span class="tr">Node</span></li>
-  <li>Δr = λ/2 → phase gap = 180° → add 180° → total <strong>360° = 0°</strong> → <span class="tg">Antinode</span></li>
+  <li>Δr = 0 → path phase = 0° → add 180° from source → total <strong>180°</strong> → <span class="tr">Node</span></li>
+  <li>Δr = λ/2 → path phase = 180° → add 180° → total <strong>360° = 0°</strong> → <span class="tg">Antinode</span></li>
 </ul>
-<p><strong>Shortcut:</strong> treat anti-phase like in-phase but swap every label.</p>
+<p><strong>Shortcut:</strong> treat anti-phase like in-phase but <em>swap every A↔N label</em>.<br>
+Total lines count is unchanged.</p>
 </div>
 """, unsafe_allow_html=True)
 
     # ══════════════════════════════════════════════════════════════════════════
-    # 08  Double-Slit Geometry
+    # 08  Double-Slit Geometry — interactive barrier
     # ══════════════════════════════════════════════════════════════════════════
     st.markdown('<hr class="div"><p class="sh"><span class="pill">08</span>'
                 'Double-Slit Geometry</p>', unsafe_allow_html=True)
 
-    _show("barrier",
-          "Plane wave diffracts through both slits then interferes  ·  "
-          "d = slit separation  ·  L = distance to screen  ·  θ₁ = angle to 1st antinode")
+    col_b1, col_b2 = st.columns(2)
+    with col_b1:
+        d_bar = st.slider('Slit separation  d  (cm)', 1.0, 6.0, 2.4, 0.2, key='bar_d')
+    with col_b2:
+        lam_bar = st.slider('Wavelength  λ  (cm)', 0.2, 2.0, 0.6, 0.1, key='bar_lam')
+
+    n0_bar = int(d_bar / lam_bar)
+    st.info(f'**d/λ = {d_bar/lam_bar:.3g}** → **{2*n0_bar+1} antinodal** lines  |  '
+            f'**{2*n0_bar} nodal** lines  on screen')
+    st.image(_io.BytesIO(_fig_barrier(d_bar, lam_bar)), use_container_width=True)
+    st.markdown('<p class="cap">Plane wave diffracts through both slits → circular wavefronts interfere '
+                '→ antinodal (green) and nodal (red dashed) lines on screen</p>',
+                unsafe_allow_html=True)
 
     c1, c2 = st.columns([1, 1], gap="large")
     with c1:
-        st.markdown('<div class="card cb"><h4>📐 Formulae</h4></div>',
+        st.markdown('<div class="card cb"><h4>📐 Key Formulae</h4></div>',
                     unsafe_allow_html=True)
         st.markdown("**n-th antinodal angle:**")
         st.latex(r"\sin\theta_n = \frac{n\lambda}{d}")
-        st.markdown("**n-th antinodal position on screen:**")
+        st.markdown("**Position on screen  (small θ):**")
         st.latex(r"x_n = \frac{n\lambda L}{d}")
         st.markdown("**Fringe spacing  Δx:**")
         st.latex(r"\Delta x = \frac{\lambda L}{d}")
@@ -1244,21 +1204,37 @@ k ends in .5 → <strong>Node</strong>
 <ul>
   <li>x₁ = 1 × 2 × 30 / 4 = <strong>15 cm</strong></li>
   <li>x₂ = 2 × 2 × 30 / 4 = <strong>30 cm</strong></li>
-  <li>Δx = 2 × 30 / 4 = <strong>15 cm</strong> (constant)</li>
+  <li>Δx = 2 × 30 / 4 = <strong>15 cm</strong> (constant spacing)</li>
 </ul>
 </div>
 <div class="card cs" style="margin-top:10px">
-<h4>Trends</h4>
+<h4>📊 Trends</h4>
 <ul>
-  <li>d ↑ → Δx ↓ (fringes closer)</li>
-  <li>λ ↑ → Δx ↑ (fringes wider)</li>
-  <li>L ↑ → Δx ↑ (fringes wider)</li>
+  <li>d ↑ → Δx ↓ (fringes crowd together)</li>
+  <li>λ ↑ → Δx ↑ (fringes spread out)</li>
+  <li>L ↑ → Δx ↑ (fringes spread out)</li>
 </ul>
 </div>
 """, unsafe_allow_html=True)
 
+    # ── Interactive fringe spacing calculator ─────────────────────────────
+    st.markdown("**🎛 Fringe spacing calculator:**")
+    col_f1, col_f2, col_f3 = st.columns(3)
+    with col_f1:
+        d_fr = st.slider('d  (cm)', 1.0, 10.0, 4.0, 0.5, key='fr_d')
+    with col_f2:
+        lam_fr = st.slider('λ  (cm)', 0.5, 5.0, 2.0, 0.5, key='fr_lam')
+    with col_f3:
+        L_fr = st.slider('L  (cm)', 10.0, 100.0, 30.0, 5.0, key='fr_L')
+
+    dx = lam_fr * L_fr / d_fr
+    col_a, col_b, col_c = st.columns(3)
+    col_a.metric('Δx  (fringe spacing)', f'{dx:.2f} cm')
+    col_b.metric('x₁  (1st antinode)', f'{dx:.2f} cm')
+    col_c.metric('x₂  (2nd antinode)', f'{2*dx:.2f} cm')
+
     # ══════════════════════════════════════════════════════════════════════════
-    # REF
+    # REF — Formula reference table
     # ══════════════════════════════════════════════════════════════════════════
     st.markdown('<hr class="div"><p class="sh"><span class="pill">REF</span>'
                 'Formula Reference</p>', unsafe_allow_html=True)
@@ -1287,19 +1263,23 @@ k ends in .5 → <strong>Node</strong>
   <td class="tr">2n₀</td>
 </tr>
 <tr>
-  <td><strong>Between S₁ S₂ (in-phase)</strong></td>
+  <td><strong>Between S₁ and S₂ only</strong></td>
   <td class="tg">2n₀ − 1</td>
   <td class="tr">2n₀ − 2</td>
 </tr>
 <tr>
   <td><strong>Angle to n-th line</strong></td>
-  <td class="tg">sin θ = nλ/d</td>
-  <td class="tr">sin θ = (n−½)λ/d</td>
+  <td class="tg">sinθ = nλ/d</td>
+  <td class="tr">sinθ = (n−½)λ/d</td>
 </tr>
 <tr>
   <td><strong>Screen position (small θ)</strong></td>
   <td class="tg">xₙ = nλL/d</td>
   <td class="tr">xₙ = (n−½)λL/d</td>
+</tr>
+<tr>
+  <td><strong>Fringe spacing Δx</strong></td>
+  <td colspan="2" style="text-align:center;font-weight:700">Δx = λL/d</td>
 </tr>
 <tr>
   <td><strong>Resultant amplitude</strong></td>
@@ -1316,6 +1296,6 @@ k ends in .5 → <strong>Node</strong>
 k = Δr ÷ λ &nbsp;·&nbsp;
 k = integer → <strong>Antinode</strong> &nbsp;·&nbsp;
 k = n − ½ → <strong>Node</strong> &nbsp;·&nbsp;
-Anti-phase sources: swap every label.
+Anti-phase: swap every label (total count unchanged).
 </div>
 """, unsafe_allow_html=True)
