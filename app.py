@@ -440,7 +440,6 @@ with st.sidebar:
                               type="primary" if is_active else "secondary",
                               use_container_width=True):
                     _select(qn)
-                    st.rerun()
 
     st.markdown("""
     <div style="padding:16px 0 4px;text-align:center;font-size:0.65rem;color:#334155;">
@@ -481,9 +480,9 @@ with tab_exercise:
         st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
         n1, n2 = st.columns(2)
         if n1.button("◀", disabled=(i <= 1), use_container_width=True, key="prev"):
-            _select(i - 1); st.rerun()
+            _select(i - 1)
         if n2.button("▶", disabled=(i >= len(questions)), use_container_width=True, key="next"):
-            _select(i + 1); st.rerun()
+            _select(i + 1)
 
     st.markdown("<hr style='margin:10px 0 18px'>", unsafe_allow_html=True)
 
@@ -574,4 +573,3 @@ with tab_exercise:
         btn_label = "🙈  ซ่อนเฉลย" if st.session_state.show_ans else "👁  แสดงเฉลย"
         if st.button(btn_label, key="toggle_ans", use_container_width=True):
             st.session_state.show_ans = not st.session_state.show_ans
-            st.rerun()
