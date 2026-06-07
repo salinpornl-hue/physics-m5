@@ -4,6 +4,7 @@ Summary tab: Single-Slit Diffraction  (🔬 การเลี้ยวเบน
 English-only, card-based layout — matches standing-waves style.
 """
 
+import io as _io
 import numpy as np
 import matplotlib
 matplotlib.use('Agg')
@@ -11,6 +12,14 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 from matplotlib.patches import Arc, FancyBboxPatch, Rectangle
 import streamlit as st
+
+
+def _fig_to_png(fig) -> bytes:
+    buf = _io.BytesIO()
+    fig.savefig(buf, format="png", dpi=110, bbox_inches="tight")
+    buf.seek(0)
+    plt.close(fig)
+    return buf.getvalue()
 
 # ── colour palette (shared with other summaries) ──────────────────────────────
 CB   = '#2563eb'   # blue
@@ -215,7 +224,7 @@ def _fig_geometry():
         ax.set_title('Single-Slit Diffraction — geometry (a = 3λ  →  3 nodal lines per side)',
                      fontsize=9.5, color=CDK, pad=6, fontweight='700')
         fig.tight_layout(pad=0.4)
-    return fig
+    return _fig_to_png(fig)
 
 
 @st.cache_data
@@ -287,7 +296,7 @@ def _fig_pattern():
                   loc='lower right', framealpha=0.95, edgecolor='#e2e8f0')
 
         fig.tight_layout(pad=0.4)
-    return fig
+    return _fig_to_png(fig)
 
 
 @st.cache_data
@@ -331,7 +340,7 @@ def _fig_ref_table():
 
         ax.set_xlim(0, 1); ax.set_ylim(0, 1)
         fig.tight_layout(pad=0.3)
-    return fig
+    return _fig_to_png(fig)
 
 
 # ── Main render function ──────────────────────────────────────────────────────
@@ -401,7 +410,7 @@ def render_diffraction():
     </div>
     """, unsafe_allow_html=True)
 
-    st.image(_fig_geometry(), use_container_width=True)
+    st.image(_io.BytesIO(_fig_geometry()), use_container_width=True)
 
     # ══════════════════════════════════════════════════════════════════════════
     # 03 — Counting Lines
@@ -446,7 +455,7 @@ def render_diffraction():
     </div>
     """, unsafe_allow_html=True)
 
-    st.image(_fig_pattern(), use_container_width=True)
+    st.image(_io.BytesIO(_fig_pattern()), use_container_width=True)
 
     # ══════════════════════════════════════════════════════════════════════════
     # 04 — Finding the Angle
@@ -554,7 +563,7 @@ def render_diffraction():
     # REF — Formula Reference
     # ══════════════════════════════════════════════════════════════════════════
     st.markdown('<div class="dif-h2">📋 Formula Reference</div>', unsafe_allow_html=True)
-    st.image(_fig_ref_table(), use_container_width=True)
+    st.image(_io.BytesIO(_fig_ref_table()), use_container_width=True)
 
     st.markdown("""
     <div class="dif-card" style="margin-top:10px">
