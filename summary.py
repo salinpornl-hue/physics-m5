@@ -163,8 +163,8 @@ def _fig_superposition():
         x = np.linspace(0, 2, 500)
 
         configs = [
-            (0,      CG,   '#f0fdf4', 'คลื่นเสริมกัน (เฟสตรงกัน)',   '#bbf7d0'),
-            (np.pi,  CRED, '#fff5f5', 'คลื่นหักล้างกัน (เฟสตรงข้าม)', '#fecaca'),
+            (0,      CG,   '#f0fdf4', 'In-phase  (Δφ = 0)',   '#bbf7d0'),
+            (np.pi,  CRED, '#fff5f5', 'Anti-phase  (Δφ = π)', '#fecaca'),
         ]
         for row, (dphi, rcol, rbg, row_title, rfill) in enumerate(configs):
             w1  = np.sin(2 * np.pi * x)
@@ -176,13 +176,13 @@ def _fig_superposition():
                 ax.set_facecolor(rbg)
                 if col == 0:
                     y, color = w1, CB
-                    ax.set_title('คลื่นจาก S₁', fontsize=9, color=CB, fontweight='bold', pad=3)
+                    ax.set_title('Wave from S₁', fontsize=9, color=CB, fontweight='bold', pad=3)
                 elif col == 1:
                     y, color = w2, CR
-                    ax.set_title('คลื่นจาก S₂', fontsize=9, color=CR, fontweight='bold', pad=3)
+                    ax.set_title('Wave from S₂', fontsize=9, color=CR, fontweight='bold', pad=3)
                 else:
                     y, color = res, rcol
-                    ax.set_title('ผลรวม (ผิวน้ำ)', fontsize=9, color=rcol, fontweight='bold', pad=3)
+                    ax.set_title('Resultant (surface)', fontsize=9, color=rcol, fontweight='bold', pad=3)
 
                 ax.fill_between(x, y, 0, where=(y >= 0), color=rfill, alpha=0.6)
                 ax.fill_between(x, y, 0, where=(y < 0),  color=rfill, alpha=0.25)
@@ -197,7 +197,7 @@ def _fig_superposition():
 
                 if col == 2:
                     amax = np.max(np.abs(res))
-                    label = f'แอมพลิจูด = {amax:.0f}A' if amax > 0.1 else 'แอมพลิจูด = 0\n(น้ำนิ่ง)'
+                    label = f'Amplitude = {amax:.0f}A' if amax > 0.1 else 'Amplitude = 0\n(still water)'
                     ax.text(0.97, 0.92, label, transform=ax.transAxes,
                             ha='right', va='top', fontsize=8.5,
                             fontweight='bold', color=rcol,
@@ -216,7 +216,7 @@ def _fig_superposition():
             fig.text(0.638, y_pos, '=', ha='center', va='center',
                      fontsize=16, color=configs[row][1], fontweight='bold')
 
-        fig.suptitle('หลักการซ้อนทับของคลื่น ณ จุดคงที่บนผิวน้ำ',
+        fig.suptitle('Superposition Principle — fixed point on the water surface',
                      fontsize=11, fontweight='bold', color=CDK, y=1.01)
         fig.tight_layout()
     return fig
@@ -316,7 +316,7 @@ def _fig_path_diff():
                 bbox=dict(boxstyle='round,pad=0.45', fc='#fef3c7',
                           ec='#f59e0b', lw=2.0), zorder=9)
 
-        ax.set_title('ผลต่างเส้นทาง Δr = ระยะต่างที่คลื่นทั้งสองเดินทางมาถึงจุด P',
+        ax.set_title('Path difference Δr = difference in distance from S₁ and S₂ to point P',
                      fontsize=9.5, color=CDK, pad=6)
         fig.tight_layout(pad=0.5)
     return fig
@@ -332,17 +332,17 @@ def _fig_conditions():
 
         panels = [
             (CG,   '#f0fdf4', '#bbf7d0',
-             'ปฏิบัพ — คลื่นเสริมกัน',
+             'Antinode — Constructive',
              r'$\Delta r = n\lambda$',
              r'$n = 0,\;1,\;2,\;3,\;\ldots$',
-             'แอมพลิจูด = 2A',
-             'สันคลื่น + สันคลื่น'),
+             'Amplitude = 2A',
+             'crest + crest'),
             (CRED, '#fef2f2', '#fecaca',
-             'บัพ — คลื่นหักล้างกัน',
+             'Node — Destructive',
              r'$\Delta r = \left(n - \tfrac{1}{2}\right)\lambda$',
              r'$n = 1,\;2,\;3,\;\ldots$',
-             'แอมพลิจูด = 0',
-             'สันคลื่น + ท้องคลื่น'),
+             'Amplitude = 0',
+             'crest + trough'),
         ]
         for ax, (col, fc, hc, title, f1, f2, result, sub) in zip(axes, panels):
             ax.set_facecolor(fc)
@@ -371,7 +371,7 @@ def _fig_conditions():
                     ha='center', va='center', fontsize=8.5,
                     color=col, style='italic')
 
-        fig.suptitle('เงื่อนไขการแทรกสอด (แหล่งกำเนิดเฟสตรงกัน)',
+        fig.suptitle('Interference Conditions  (in-phase sources)',
                      fontsize=10, color=CGR, y=1.02)
         fig.tight_layout(pad=0.8)
     return fig
@@ -447,13 +447,13 @@ def _fig_two_sources():
         ax.text(-0.85, 0, f'd={int(d)}cm', color=CGR,
                 fontsize=8.5, ha='center', va='center', rotation=90)
 
-        h1 = mpatches.Patch(color=CG,   label=f'แนวปฏิบัพ ({2*n_max+1} แนว)')
-        h2 = mpatches.Patch(color=CRED, label=f'แนวบัพ ({2*n_max} แนว)',
+        h1 = mpatches.Patch(color=CG,   label=f'Antinodal lines ({2*n_max+1})')
+        h2 = mpatches.Patch(color=CRED, label=f'Nodal lines ({2*n_max})',
                              fill=False, linestyle='--', edgecolor=CRED)
         l1 = mpatches.Patch(color=CB, fill=False, linewidth=1.4,
-                             edgecolor=CB, label='หน้าคลื่นจาก S₁')
+                             edgecolor=CB, label='Wavefront from S₁')
         l2 = mpatches.Patch(color=CR, fill=False, linewidth=1.4,
-                             edgecolor=CR, label='หน้าคลื่นจาก S₂')
+                             edgecolor=CR, label='Wavefront from S₂')
         ax.legend(handles=[l1, l2, h1, h2], fontsize=7.5,
                   loc='lower right', framealpha=0.92, edgecolor='#e2e8f0')
 
@@ -462,7 +462,7 @@ def _fig_two_sources():
         ax.set_ylabel('y (cm)', fontsize=9, color=CGR)
         ax.tick_params(labelsize=7.5)
         ax.set_title(f'd = {int(d)} cm,  λ = {int(lam)} cm  →  '
-                     f'ปฏิบัพ: {2*n_max+1} แนว,  บัพ: {2*n_max} แนว',
+                     f'Antinodal: {2*n_max+1} lines,  Nodal: {2*n_max} lines',
                      fontsize=9, color=CDK, pad=5)
         ax.spines[['top','right']].set_visible(False)
         fig.tight_layout()
@@ -531,8 +531,8 @@ def _fig_pattern():
                 fontsize=8, ha='center', va='center', rotation=90)
         ax.axhline(0, color=CGR, lw=0.7, ls=':', alpha=0.5)
 
-        h1 = mpatches.Patch(color=CG,   label=f'แนวปฏิบัพ ({2*n_max+1} แนว)')
-        h2 = mpatches.Patch(color=CRED, label=f'แนวบัพ ({2*n_max} แนว)',
+        h1 = mpatches.Patch(color=CG,   label=f'Antinodal lines ({2*n_max+1})')
+        h2 = mpatches.Patch(color=CRED, label=f'Nodal lines ({2*n_max})',
                              fill=False, linestyle='--', edgecolor=CRED)
         ax.legend(handles=[h1, h2], fontsize=8.5, loc='lower right',
                   framealpha=0.95, edgecolor='#e2e8f0')
@@ -541,7 +541,7 @@ def _fig_pattern():
         ax.set_xlabel('x (cm)', fontsize=9)
         ax.set_ylabel('y (cm)', fontsize=9)
         ax.set_title(f'd = {int(d)} cm,  λ = {lam} cm  →  '
-                     f'ปฏิบัพ {2*n_max+1} แนว,  บัพ {2*n_max} แนว',
+                     f'Antinodal {2*n_max+1} lines,  Nodal {2*n_max} lines',
                      fontsize=9.5, fontweight='600', color=CDK)
         ax.spines[['top','right']].set_visible(False)
         fig.tight_layout()
@@ -566,7 +566,7 @@ def _fig_ruler():
         for xi in range(0, 11):
             ax.plot([xi, xi], [-0.16, 0.16], color=CGR, lw=0.9)
             ax.text(xi, -0.36, str(xi), ha='center', fontsize=7.5, color=CGR)
-        ax.text(5, -0.65, 'ตำแหน่งบนเส้น S₁S₂ (cm)',
+        ax.text(5, -0.65, 'Position along S₁S₂ (cm)',
                 ha='center', fontsize=8.5, color=CGR)
 
         for xp, col, lbl in [(0, CB, 'S₁'), (10, CR, 'S₂')]:
@@ -603,13 +603,13 @@ def _fig_ruler():
 
         ax.text(5.0, 2.70,
                 f'd = {int(d)} cm,  λ = {int(lam)} cm  →  '
-                f'ปฏิบัพ {int(d/lam)*2+1} แนว,  บัพ {int(d/lam)*2} แนว',
+                f'Antinodal {int(d/lam)*2+1} lines,  Nodal {int(d/lam)*2} lines',
                 ha='center', fontsize=10, fontweight='700', color=CDK,
                 bbox=dict(boxstyle='round,pad=0.35', fc='#f1f5f9',
                           ec='#cbd5e1', lw=1.6))
 
-        h1 = mpatches.Patch(color=CG,   label='ปฏิบัพ (คลื่นเสริมกัน)')
-        h2 = mpatches.Patch(color=CRED, label='บัพ (คลื่นหักล้างกัน)')
+        h1 = mpatches.Patch(color=CG,   label='Antinode (constructive)')
+        h2 = mpatches.Patch(color=CRED, label='Node (destructive)')
         ax.legend(handles=[h1, h2], fontsize=8.5,
                   loc='upper left', framealpha=0.95, edgecolor='#e2e8f0')
         fig.tight_layout()
@@ -630,12 +630,12 @@ def _fig_antiphase():
 
         x = np.linspace(0, 2, 500)
         col_cfgs = [
-            (0,      'เฟสตรงกัน  (Δφ = 0)',     CG,   '#f0f7ff', '#f0fdf4', CG,
-             'ปฏิบัพ\nแอมพลิจูด = 2A'),
-            (np.pi,  'เฟสตรงข้าม  (Δφ = π)',    CRED, '#fff8f8', '#fff5f5', CRED,
-             'บัพ\nแอมพลิจูด = 0'),
+            (0,      'In-phase  (Δφ = 0)',      CG,   '#f0f7ff', '#f0fdf4', CG,
+             'Antinode\nAmplitude = 2A'),
+            (np.pi,  'Anti-phase  (Δφ = π)',   CRED, '#fff8f8', '#fff5f5', CRED,
+             'Node\nAmplitude = 0'),
         ]
-        row_labels = ['คลื่นจาก S₁', 'คลื่นจาก S₂', 'ผลรวม\n(ผิวน้ำ)']
+        row_labels = ['Wave from S₁', 'Wave from S₂', 'Resultant\n(surface)']
         row_colors = [CB, CR, CGR]
 
         for col_i, (src_phase, col_title, title_col,
@@ -686,7 +686,7 @@ def _fig_antiphase():
                             bbox=dict(boxstyle='round,pad=0.3',
                                       fc=badge_fc, ec=rcol, lw=2.0))
 
-        fig.suptitle('เปรียบเทียบ: แหล่งกำเนิดเฟสตรงกัน vs เฟสตรงข้าม  (Δr = 0)',
+        fig.suptitle('In-phase vs Anti-phase Sources  (Δr = 0)',
                      fontsize=11, fontweight='bold', color=CDK, y=0.96)
         fig.add_artist(plt.Line2D([0.545, 0.545], [0.06, 0.92],
                                   transform=fig.transFigure,
@@ -725,7 +725,7 @@ def _fig_barrier():
         ax.annotate('', xy=(-0.8, 0), xytext=(-3.5, 0),
                     arrowprops=dict(arrowstyle='->', color=CB, lw=2.0,
                                    mutation_scale=16), zorder=9)
-        ax.text((X_LEFT+0)/2, 1.2, 'คลื่นหน้าตรง\nเคลื่อนที่เข้ามา',
+        ax.text((X_LEFT+0)/2, 1.2, 'Plane wave\nentering →',
                 color=CB, fontsize=8.5, ha='center', va='bottom',
                 fontweight='600', zorder=9)
 
@@ -736,7 +736,7 @@ def _fig_barrier():
                        ((d/2 + gap), Y_MAX)]:
             ax.add_patch(Rectangle((-bw, y0), 2*bw, y1-y0,
                                    fc='#475569', ec='none', alpha=0.90, zorder=6))
-        ax.text(-bw-0.2, -Y_MAX+0.15, 'แผ่นกั้น', color='#475569',
+        ax.text(-bw-0.2, -Y_MAX+0.15, 'Barrier', color='#475569',
                 fontsize=7.5, ha='right', va='bottom', fontweight='600', zorder=9)
 
         # d annotation
@@ -776,7 +776,7 @@ def _fig_barrier():
             ye  = R_MAX * np.sin(th)
             lw_a = 2.0 if n == 0 else 1.4
             ax.plot([0, xe], [0, ye], color=CG, lw=lw_a, alpha=0.9, zorder=4)
-            lbl = 'A₀ (กลาง)' if n == 0 else f'A{abs(n)}'
+            lbl = 'A₀ (centre)' if n == 0 else f'A{abs(n)}'
             ha  = 'left' if xe > 0 else 'right'
             va  = ('bottom' if ye > 0.4 else 'top' if ye < -0.4 else 'center')
             ax.text(xe*1.04, ye*1.04, lbl, color=CG, fontsize=8,
@@ -810,10 +810,10 @@ def _fig_barrier():
         ax.annotate('', xy=(X_RIGHT-0.4, y_arr), xytext=(0, y_arr),
                     arrowprops=dict(arrowstyle='<->', color=CGR, lw=1.2))
         ax.text((X_RIGHT-0.4)/2, y_arr-0.42,
-                'L (ระยะไปยังจุดวัด)',
+                'L  (distance to screen)',
                 ha='center', fontsize=8, color=CGR, zorder=8)
 
-        ax.set_title('มุมมองจากด้านบน: คลื่นผ่านช่องสองช่องในแผ่นกั้น',
+        ax.set_title('Top view: plane wave through double slit',
                      fontsize=9.5, color=CDK, pad=6, fontweight='700')
         fig.tight_layout(pad=0.4)
     return fig
@@ -832,14 +832,14 @@ def _fig_flowchart():
 
         steps = [
             (1.18, '#1e3a8a', '#eff6ff',
-             'ขั้น 1',
+             'Step 1',
              r'$\Delta r = |r_1 - r_2|$'),
             (3.80, '#065f46', '#f0fdf4',
-             'ขั้น 2',
+             'Step 2',
              r'$k = \Delta r \;/\; \lambda$'),
             (6.42, '#78350f', '#fefce8',
-             'ขั้น 3',
-             'k เป็นเลขจำนวนเต็ม\nหรือ ครึ่งจำนวนเต็ม?'),
+             'Step 3',
+             'Is k a whole\nnumber or n − ½?'),
         ]
         for xc, bc, fc, title, body in steps:
             ax.add_patch(FancyBboxPatch((xc-1.05, 0.38), 2.10, 2.06,
@@ -860,8 +860,8 @@ def _fig_flowchart():
                     arrowprops=dict(arrowstyle='->', color=CRED, lw=1.8))
 
         for yc, col, fc2, txt in [
-            (2.28,  CG,   '#dcfce7', 'k = 0,1,2,…\n→ ปฏิบัพ'),
-            (0.55,  CRED, '#fee2e2', 'k = ½,1½,…\n→ บัพ'),
+            (2.28,  CG,   '#dcfce7', 'k = 0,1,2,…\n→ Antinode'),
+            (0.55,  CRED, '#fee2e2', 'k = ½,1½,…\n→ Node'),
         ]:
             ax.add_patch(FancyBboxPatch((7.56, yc-0.38), 1.85, 0.76,
                                         boxstyle='round,pad=0.06',
@@ -869,7 +869,7 @@ def _fig_flowchart():
             ax.text(8.44, yc, txt, ha='center', va='center',
                     fontsize=8.5, color=col, fontweight='700')
 
-        ax.set_title('วิธีแก้โจทย์ 3 ขั้นตอน (ใช้ได้กับทุกโจทย์)',
+        ax.set_title('3-Step method — works for every interference problem',
                      fontsize=9.5, color=CGR, pad=4)
         fig.tight_layout(pad=0.3)
     return fig
@@ -885,13 +885,12 @@ def render_summary():
     st.markdown("""
 <div class="hero">
   <h1>🌊 Wave Interference</h1>
-  <p>From superposition principle to counting nodal &amp; antinodal lines,
-     double-slit geometry, and anti-phase sources.<br>
+  <p>Coherent sources · superposition · path difference · counting lines · double-slit geometry<br>
      Physics · Grade 11 · Mechanical Waves</p>
   <div class="hero-meta">
-    <span class="hero-tag">Interference</span>
     <span class="hero-tag">Coherent Sources</span>
     <span class="hero-tag">Path Difference</span>
+    <span class="hero-tag">Antinodes &amp; Nodes</span>
     <span class="hero-tag">Double Slit</span>
   </div>
 </div>
@@ -903,172 +902,160 @@ def render_summary():
     st.markdown('<p class="sh"><span class="pill">01</span>Coherent Sources</p>',
                 unsafe_allow_html=True)
 
-    c1, c2 = st.columns([1, 1], gap="large")
+    c1, c2 = st.columns(2, gap="large")
     with c1:
         st.markdown("""
 <div class="card cb">
 <h4>📖 Definition</h4>
-<p>Two wave sources are <strong>coherent</strong> when they have:</p>
+<p>Two sources are <strong>coherent</strong> when they share:</p>
 <ul>
-  <li><strong>The same frequency</strong></li>
-  <li>A <strong>constant phase difference</strong> at all times</li>
+  <li>The <strong>same frequency</strong></li>
+  <li>A <strong>constant phase difference</strong> (does not drift over time)</li>
 </ul>
-<p>In a ripple tank: two vibrating prongs driven by the same motor.</p>
+<p>In practice: two prongs on the same motor in a ripple tank, or two slits illuminated by one source.</p>
 </div>
 """, unsafe_allow_html=True)
     with c2:
         st.markdown("""
 <div class="card cs">
-<h4>⚡ Two Main Cases</h4>
+<h4>⚡ Two Cases</h4>
 <ul>
-  <li><strong>In-phase</strong> (Δφ = 0) — both crests leave together</li>
-  <li><strong>Anti-phase</strong> (Δφ = π) — one crest, one trough</li>
+  <li><strong>In-phase</strong> (Δφ = 0) — crests leave both sources simultaneously</li>
+  <li><strong>Anti-phase</strong> (Δφ = π) — one emits a crest while the other emits a trough</li>
 </ul>
-<p>Problems usually state "in-phase."
-   If not specified, assume in-phase.</p>
+<p>Most problems say "in-phase." If unspecified, assume in-phase.</p>
 </div>
 """, unsafe_allow_html=True)
 
     # ══════════════════════════════════════════════════════════════════════════
-    # 02  Superposition Principle
+    # 02  Superposition
     # ══════════════════════════════════════════════════════════════════════════
     st.markdown('<hr class="div"><p class="sh"><span class="pill">02</span>'
-                'Superposition Principle</p>',
-                unsafe_allow_html=True)
+                'Superposition Principle</p>', unsafe_allow_html=True)
 
     _show("superposition",
-          "Top row: crest + crest → amplitude 2A (constructive)  |  "
-          "Bottom row: crest + trough → amplitude 0 (destructive)")
+          "Top: crest + crest → 2A (constructive)  |  Bottom: crest + trough → 0 (destructive)")
 
-    c1, c2 = st.columns([1, 1], gap="large")
+    c1, c2 = st.columns(2, gap="large")
     with c1:
         st.markdown("""
 <div class="card cg">
-<h4>✅ Constructive Interference</h4>
+<h4>✅ Constructive — Antinode</h4>
 <ul>
-  <li>Crest meets crest, or trough meets trough</li>
-  <li>Two waves arrive <strong>in phase</strong> at the same point</li>
-  <li>Resultant amplitude = <strong>2A</strong></li>
-  <li>The point is called an <strong>Antinode (AN)</strong></li>
+  <li>Crest meets crest  <em>or</em>  trough meets trough</li>
+  <li>Waves arrive <strong>in phase</strong></li>
+  <li>Resultant amplitude = <strong>2A</strong>  (maximum)</li>
 </ul>
 </div>
 """, unsafe_allow_html=True)
     with c2:
         st.markdown("""
 <div class="card cr">
-<h4>❌ Destructive Interference</h4>
+<h4>❌ Destructive — Node</h4>
 <ul>
   <li>Crest meets trough</li>
-  <li>Two waves arrive <strong>out of phase (180°)</strong></li>
-  <li>Resultant amplitude = <strong>0</strong> — surface stays still</li>
-  <li>The point is called a <strong>Node (N)</strong></li>
+  <li>Waves arrive <strong>180° out of phase</strong></li>
+  <li>Resultant amplitude = <strong>0</strong>  (surface still)</li>
 </ul>
 </div>
 """, unsafe_allow_html=True)
 
     # ══════════════════════════════════════════════════════════════════════════
-    # 03  Path Difference Δr
+    # 03  Path Difference
     # ══════════════════════════════════════════════════════════════════════════
     st.markdown('<hr class="div"><p class="sh"><span class="pill">03</span>'
-                'Path Difference Δr — the Core Quantity</p>',
-                unsafe_allow_html=True)
+                'Path Difference  Δr</p>', unsafe_allow_html=True)
 
-    c1, c2 = st.columns([1.3, 1], gap="large")
+    c1, c2 = st.columns([1.4, 1], gap="large")
     with c1:
         _show("path_diff",
-              "Circles = wavefronts (crests)  |  Curves = wave paths r₁ and r₂ to point P")
+              "Rings = wavefronts (crests)  ·  Curves = actual wave paths r₁ and r₂ to point P")
     with c2:
         st.markdown("""
 <div class="card cb">
-<h4>📐 Definition</h4>
-<p>Path difference is the <strong>difference in distance</strong>
-travelled by each wave to reach point P.</p>
+<h4>📐 What is Δr?</h4>
+<p>The <strong>difference in distance</strong> each wave travels to reach point P.</p>
 </div>
 """, unsafe_allow_html=True)
-        st.latex(r"\Delta r \;=\; |r_1 - r_2|")
+        st.latex(r"\Delta r = |r_1 - r_2|")
         st.markdown("""
-<div class="card cb" style="margin-top:12px">
-<h4>🔑 Why Δr Determines Interference</h4>
-<ul>
-  <li>Δr = nλ → waves travel an <em>exact integer number of wavelengths apart</em>
-      → arrive <strong>in phase</strong> → <span class="tg">Antinode</span></li>
-  <li>Δr = (n−½)λ → half-wavelength difference
-      → arrive <strong>out of phase</strong> → <span class="tr">Node</span></li>
-</ul>
+<div class="card cg" style="margin-top:10px">
+<h4>✅ Antinode condition</h4>
+<p>Waves travel exactly <em>n whole wavelengths</em> apart → arrive in phase.</p>
 </div>
 """, unsafe_allow_html=True)
+        st.latex(r"\Delta r = n\lambda \quad (n = 0,1,2,\ldots)")
+        st.markdown("""
+<div class="card cr" style="margin-top:10px">
+<h4>❌ Node condition</h4>
+<p>Waves travel a <em>half-wavelength</em> extra → arrive 180° out of phase.</p>
+</div>
+""", unsafe_allow_html=True)
+        st.latex(r"\Delta r = \!\left(n-\tfrac{1}{2}\right)\lambda \quad (n = 1,2,3,\ldots)")
 
     # ══════════════════════════════════════════════════════════════════════════
-    # 04  Conditions (in-phase sources)
+    # 04  Interference Pattern
     # ══════════════════════════════════════════════════════════════════════════
     st.markdown('<hr class="div"><p class="sh"><span class="pill">04</span>'
-                'Conditions for Antinode &amp; Node (In-phase Sources)</p>',
-                unsafe_allow_html=True)
+                'Interference Pattern — Top View</p>', unsafe_allow_html=True)
 
-    _show("conditions")
+    _show("conditions",
+          "Left panel: antinodal condition  ·  Right panel: nodal condition  (in-phase sources)")
 
     c1, c2 = st.columns(2, gap="large")
     with c1:
-        st.markdown('<div class="card cg"><h4>✅ Antinode (constructive)</h4></div>',
-                    unsafe_allow_html=True)
-        st.latex(r"\Delta r = n\lambda \quad n = 0,\,1,\,2,\,3,\,\ldots")
-        st.markdown("Resultant amplitude = **2A**")
-    with c2:
-        st.markdown('<div class="card cr"><h4>❌ Node (destructive)</h4></div>',
-                    unsafe_allow_html=True)
-        st.latex(r"\Delta r = \left(n - \tfrac{1}{2}\right)\lambda \quad n = 1,\,2,\,3,\,\ldots")
-        st.markdown("Resultant amplitude = **0**")
-
-    # ══════════════════════════════════════════════════════════════════════════
-    # 05  Interference Pattern — top view
-    # ══════════════════════════════════════════════════════════════════════════
-    st.markdown('<hr class="div"><p class="sh"><span class="pill">05</span>'
-                'Interference Pattern — Top View</p>',
-                unsafe_allow_html=True)
-
-    c1, c2 = st.columns([1, 1], gap="large")
-    with c1:
         _show("two_sources",
-              "Solid circles = wavefronts  |  Green lines = antinodal lines  |  Dashed red = nodal lines")
+              "Solid green = antinodal lines  ·  Dashed red = nodal lines  ·  d = 5 cm, λ = 2 cm")
     with c2:
         _show("pattern",
               "d = 10 cm, λ = 2.5 cm  →  9 antinodal lines, 8 nodal lines")
 
     st.markdown("""
 <div class="card cb">
-<h4>🗺️ How to Read the Circular-Wave Diagram</h4>
+<h4>🗺️ Reading the Diagram</h4>
 <ul>
-  <li>Blue rings = crests from S₁ &nbsp;|&nbsp; Red rings = crests from S₂</li>
-  <li>Blue ring meets blue ring → <strong class="tg">crest + crest → Antinode</strong></li>
-  <li>Blue ring meets red ring → <strong class="tr">crest + trough → Node</strong></li>
-  <li>Connect all antinodes → <strong>antinodal line (solid green)</strong></li>
-  <li>Connect all nodes → <strong>nodal line (dashed red)</strong></li>
+  <li><strong>Blue rings</strong> = crests from S₁ &nbsp;·&nbsp; <strong>Red rings</strong> = crests from S₂</li>
+  <li>Blue meets blue → crest + crest → <span class="tg"><strong>Antinode</strong></span></li>
+  <li>Blue meets red &nbsp;→ crest + trough → <span class="tr"><strong>Node</strong></span></li>
+  <li>Connecting all antinodes gives a <strong>solid antinodal line</strong> (hyperbola)</li>
+  <li>Connecting all nodes gives a <strong>dashed nodal line</strong></li>
 </ul>
 </div>
 """, unsafe_allow_html=True)
 
     # ══════════════════════════════════════════════════════════════════════════
-    # 06  Counting Lines
+    # 05  Counting Lines
     # ══════════════════════════════════════════════════════════════════════════
-    st.markdown('<hr class="div"><p class="sh"><span class="pill">06</span>'
-                'Counting Antinodal &amp; Nodal Lines</p>',
-                unsafe_allow_html=True)
+    st.markdown('<hr class="div"><p class="sh"><span class="pill">05</span>'
+                'Counting Antinodal &amp; Nodal Lines</p>', unsafe_allow_html=True)
 
     _show("ruler",
-          "◆ antinodes above axis  |  ▼ nodes below axis  (d = 10 cm, λ = 2 cm)")
+          "◆ antinodal positions above axis  ·  ▼ nodal positions below axis  "
+          "(d = 10 cm, λ = 2 cm  →  n₀ = 5)")
 
     c1, c2 = st.columns([1, 1.1], gap="large")
     with c1:
-        st.markdown('<div class="card cb"><h4>Find n<sub>max</sub></h4></div>',
-                    unsafe_allow_html=True)
-        st.latex(r"n_{\max} = \left\lfloor \frac{d}{\lambda} \right\rfloor"
-                 r"\quad\text{(integer part only)}")
+        st.markdown("""
+<div class="card cb">
+<h4>Step 1 — Find n₀</h4>
+</div>
+""", unsafe_allow_html=True)
+        st.latex(r"n_0 = \left\lfloor \frac{d}{\lambda} \right\rfloor"
+                 r"\quad \text{(take integer part)}")
         st.markdown("""
 <div class="card cg" style="margin-top:10px">
-<h4>Line Counts</h4>
+<h4>Step 2 — Count</h4>
 <ul>
-  <li>Total antinodal lines = <strong>2n<sub>max</sub> + 1</strong></li>
-  <li>Total nodal lines = <strong>2n<sub>max</sub></strong></li>
+  <li>Antinodal lines total = <strong>2n₀ + 1</strong></li>
+  <li>Nodal lines total &nbsp;&nbsp;&nbsp;&nbsp;= <strong>2n₀</strong></li>
+</ul>
+</div>
+<div class="card cy" style="margin-top:10px">
+<h4>📝 Example</h4>
+<p>d = 12 cm, λ = 4 cm &nbsp;→&nbsp; n₀ = <strong>3</strong></p>
+<ul>
+  <li>Antinodal lines = 2×3 + 1 = <span class="tg">7</span></li>
+  <li>Nodal lines &nbsp;&nbsp;&nbsp;&nbsp;= 2×3 &nbsp;&nbsp;&nbsp;&nbsp;= <span class="tr">6</span></li>
 </ul>
 </div>
 """, unsafe_allow_html=True)
@@ -1076,9 +1063,9 @@ travelled by each wave to reach point P.</p>
         st.markdown("""
 <table class="rt">
 <thead><tr>
-  <th>Where counted</th>
-  <th class="tg">Antinodes</th>
-  <th class="tr">Nodes</th>
+  <th>Region</th>
+  <th class="tg">Antinodal</th>
+  <th class="tr">Nodal</th>
 </tr></thead>
 <tbody>
 <tr>
@@ -1087,46 +1074,40 @@ travelled by each wave to reach point P.</p>
   <td class="tr">2n₀</td>
 </tr>
 <tr>
-  <td>Between S₁ and S₂</td>
+  <td>Between S₁ and S₂ only</td>
   <td class="tg">2n₀ − 1</td>
-  <td class="tr">2(n₀ − 1)</td>
+  <td class="tr">2n₀ − 2</td>
 </tr>
 </tbody>
 </table>
-<p style="font-size:.75rem;color:#64748b;margin-top:6px">
-* Valid when d is exactly divisible by λ
+<p style="font-size:.78rem;color:#64748b;margin-top:8px">
+  ※ Valid when d/λ is a whole number.
+  If d/λ has a remainder, count carefully using Δr conditions.
 </p>
-""", unsafe_allow_html=True)
-
-    st.markdown("""
-<div class="card cy">
-<h4>📝 Worked Example</h4>
-<p><strong>Given:</strong> d = 12 cm,  λ = 4 cm  →  n₀ = 12/4 = <strong>3</strong></p>
+<div class="card cp" style="margin-top:14px">
+<h4>⚠️ Quick Check</h4>
 <ul>
-  <li>Total antinodal lines = 2×3 + 1 = <span class="tg">7 lines</span>
-      &nbsp;(A₀, A₁, A₂, A₃ on both sides)</li>
-  <li>Total nodal lines = 2×3 = <span class="tr">6 lines</span>
-      &nbsp;(N₁, N₂, N₃ on both sides)</li>
-  <li>Between S₁S₂: antinodes = 2×3 − 1 = <span class="tg">5</span>,
-      &nbsp;nodes = 2×(3−1) = <span class="tr">4</span></li>
+  <li>The central line (Δr = 0) is <strong>always an antinode</strong> for in-phase sources</li>
+  <li>Antinodal and nodal lines <strong>alternate</strong> outward from centre</li>
+  <li>Label: A₀ (centre), A₁, A₂ … and N₁, N₂ …</li>
 </ul>
 </div>
 """, unsafe_allow_html=True)
 
     # ══════════════════════════════════════════════════════════════════════════
-    # 07  3-Step Problem Method
+    # 06  3-Step Method
     # ══════════════════════════════════════════════════════════════════════════
-    st.markdown('<hr class="div"><p class="sh"><span class="pill">07</span>'
-                '3-Step Method for Any Interference Problem</p>',
-                unsafe_allow_html=True)
+    st.markdown('<hr class="div"><p class="sh"><span class="pill">06</span>'
+                '3-Step Problem Method</p>', unsafe_allow_html=True)
 
     _show("flowchart")
 
     st.markdown("""
 <div class="keytip">
-💡 <strong>Golden rule:</strong>&nbsp; compute k = Δr ÷ λ &nbsp;—&nbsp;
-k is an <strong>integer</strong> → Antinode &nbsp;|&nbsp;
-k ends in <strong>.5</strong> → Node
+💡 <strong>Golden rule:</strong>&nbsp;
+Compute  k = Δr ÷ λ &nbsp;—&nbsp;
+k whole number → <strong>Antinode</strong> &nbsp;·&nbsp;
+k ends in .5 → <strong>Node</strong>
 </div>
 """, unsafe_allow_html=True)
 
@@ -1134,11 +1115,11 @@ k ends in <strong>.5</strong> → Node
     with c1:
         st.markdown("""
 <div class="card cy">
-<h4>Example 1</h4>
-<p>d = 10 cm, λ = 2.5 cm  |  Point A: r₁ = 12, r₂ = 17 cm</p>
+<h4>Example A — identify the line</h4>
+<p>λ = 2.5 cm &nbsp;·&nbsp; r₁ = 12 cm, r₂ = 17 cm</p>
 <ul>
   <li>Δr = |12 − 17| = <strong>5 cm</strong></li>
-  <li>k = 5 ÷ 2.5 = <strong>2.0</strong> ← integer</li>
+  <li>k = 5 ÷ 2.5 = <strong>2.0</strong> &nbsp;(integer)</li>
   <li>→ <span class="tg">Antinode A₂</span></li>
 </ul>
 </div>
@@ -1146,110 +1127,107 @@ k ends in <strong>.5</strong> → Node
     with c2:
         st.markdown("""
 <div class="card cy">
-<h4>Example 2</h4>
-<p>λ = 2.5 cm  |  Point B: r₁ = 14.5, r₂ = 15.75 cm</p>
+<h4>Example B — identify the line</h4>
+<p>λ = 2.5 cm &nbsp;·&nbsp; r₁ = 14.5 cm, r₂ = 15.75 cm</p>
 <ul>
   <li>Δr = |14.5 − 15.75| = <strong>1.25 cm</strong></li>
-  <li>k = 1.25 ÷ 2.5 = <strong>0.5</strong> ← ends in .5</li>
+  <li>k = 1.25 ÷ 2.5 = <strong>0.5</strong> &nbsp;(ends in .5)</li>
   <li>→ <span class="tr">Node N₁</span></li>
 </ul>
 </div>
 """, unsafe_allow_html=True)
 
     # ══════════════════════════════════════════════════════════════════════════
-    # 08  Anti-phase Sources
+    # 07  Anti-phase Sources
     # ══════════════════════════════════════════════════════════════════════════
-    st.markdown('<hr class="div"><p class="sh"><span class="pill">08</span>'
-                'Anti-phase Sources (Δφ = 180°)</p>',
-                unsafe_allow_html=True)
+    st.markdown('<hr class="div"><p class="sh"><span class="pill">07</span>'
+                'Anti-phase Sources  (Δφ = 180°)</p>', unsafe_allow_html=True)
 
     _show("antiphase",
-          "Left: in-phase sources → Δr = 0 is an Antinode  |  "
-          "Right: anti-phase sources → Δr = 0 is a Node")
+          "Left: in-phase → Δr = 0 gives Antinode  ·  Right: anti-phase → Δr = 0 gives Node")
 
     c1, c2 = st.columns(2, gap="large")
     with c1:
         st.markdown("""
 <div class="card cr">
-<h4>⚠️ Conditions Are Swapped!</h4>
-<p>Anti-phase sources already differ by 180°, so the interference
-conditions reverse completely.</p>
+<h4>⚠️ Conditions Are Swapped</h4>
+<p>Anti-phase sources start 180° apart, so every Δr condition flips.</p>
 </div>
 """, unsafe_allow_html=True)
         st.markdown("""
 <table class="rt">
-<thead><tr><th>Δr</th><th>In-phase</th><th>Anti-phase</th></tr></thead>
+<thead>
+  <tr><th>Δr</th><th>In-phase</th><th>Anti-phase</th></tr>
+</thead>
 <tbody>
-<tr><td>0, λ, 2λ …</td>
-    <td class="tg">Antinode</td><td class="tr">Node</td></tr>
-<tr><td>λ/2, 3λ/2 …</td>
-    <td class="tr">Node</td><td class="tg">Antinode</td></tr>
+  <tr><td>0, λ, 2λ …</td>
+      <td class="tg">Antinode</td><td class="tr">Node</td></tr>
+  <tr><td>½λ, 1½λ …</td>
+      <td class="tr">Node</td><td class="tg">Antinode</td></tr>
 </tbody>
 </table>
 """, unsafe_allow_html=True)
     with c2:
         st.markdown("""
 <div class="card cy">
-<h4>💡 Easy Way to Remember</h4>
-<p>Anti-phase sources already carry a 180° head start:</p>
+<h4>💡 Intuition</h4>
+<p>The source phase shift of 180° acts like an extra Δr = λ/2:</p>
 <ul>
-  <li>Δr = 0 → adds 0° → total 180° → <span class="tr">Node</span></li>
-  <li>Δr = λ/2 → adds 180° → total 360° = 0° → <span class="tg">Antinode</span></li>
+  <li>Δr = 0 → phase gap from path = 0° → add 180° from source → total <strong>180°</strong> → <span class="tr">Node</span></li>
+  <li>Δr = λ/2 → phase gap = 180° → add 180° → total <strong>360° = 0°</strong> → <span class="tg">Antinode</span></li>
 </ul>
-<p><strong>Rule:</strong> anti-phase = in-phase with nodes and antinodes swapped.</p>
+<p><strong>Shortcut:</strong> treat anti-phase like in-phase but swap every label.</p>
 </div>
 """, unsafe_allow_html=True)
 
     # ══════════════════════════════════════════════════════════════════════════
-    # 09  Double Slit / Barrier
+    # 08  Double-Slit Geometry
     # ══════════════════════════════════════════════════════════════════════════
-    st.markdown('<hr class="div"><p class="sh"><span class="pill">09</span>'
-                'Double-Slit Geometry</p>',
-                unsafe_allow_html=True)
+    st.markdown('<hr class="div"><p class="sh"><span class="pill">08</span>'
+                'Double-Slit Geometry</p>', unsafe_allow_html=True)
 
     _show("barrier",
-          "Plane wave diffracts through both slits, then interferes on the right  |  "
-          "θ₁ = angle to 1st antinodal line")
+          "Plane wave diffracts through both slits then interferes  ·  "
+          "d = slit separation  ·  L = distance to screen  ·  θ₁ = angle to 1st antinode")
 
-    c1, c2 = st.columns(2, gap="large")
+    c1, c2 = st.columns([1, 1], gap="large")
     with c1:
-        st.markdown('<div class="card cb"><h4>📐 Key Formulae</h4></div>',
+        st.markdown('<div class="card cb"><h4>📐 Formulae</h4></div>',
                     unsafe_allow_html=True)
-        st.markdown("**Angle to n-th antinode:**")
+        st.markdown("**n-th antinodal angle:**")
         st.latex(r"\sin\theta_n = \frac{n\lambda}{d}")
-        st.markdown("**Distance from centre line (small angle):**")
+        st.markdown("**n-th antinodal position on screen:**")
         st.latex(r"x_n = \frac{n\lambda L}{d}")
-        st.markdown("**Fringe spacing (adjacent antinodes):**")
+        st.markdown("**Fringe spacing  Δx:**")
         st.latex(r"\Delta x = \frac{\lambda L}{d}")
-        st.markdown("**Angle to n-th node:**")
+        st.markdown("**n-th nodal angle:**")
         st.latex(r"\sin\theta_n = \frac{(n-\tfrac{1}{2})\lambda}{d}")
     with c2:
         st.markdown("""
 <div class="card cg">
 <h4>📝 Worked Example</h4>
-<p>d = 4 cm, λ = 2 cm, L = 30 cm</p>
+<p>d = 4 cm &nbsp;·&nbsp; λ = 2 cm &nbsp;·&nbsp; L = 30 cm</p>
 <ul>
-  <li>x₁ = (1 × 2 × 30) / 4 = <strong>15 cm</strong></li>
-  <li>x₂ = (2 × 2 × 30) / 4 = <strong>30 cm</strong></li>
-  <li>Δx = 2 × 30 / 4 = <strong>15 cm</strong></li>
+  <li>x₁ = 1 × 2 × 30 / 4 = <strong>15 cm</strong></li>
+  <li>x₂ = 2 × 2 × 30 / 4 = <strong>30 cm</strong></li>
+  <li>Δx = 2 × 30 / 4 = <strong>15 cm</strong> (constant)</li>
 </ul>
 </div>
-<div class="card cp" style="margin-top:10px">
-<h4>⚠️ Key Observations</h4>
+<div class="card cs" style="margin-top:10px">
+<h4>Trends</h4>
 <ul>
-  <li>Double slit = two coherent in-phase sources</li>
-  <li>Larger d → smaller x (fringes closer together)</li>
-  <li>Larger λ → larger x (fringes spread apart)</li>
+  <li>d ↑ → Δx ↓ (fringes closer)</li>
+  <li>λ ↑ → Δx ↑ (fringes wider)</li>
+  <li>L ↑ → Δx ↑ (fringes wider)</li>
 </ul>
 </div>
 """, unsafe_allow_html=True)
 
     # ══════════════════════════════════════════════════════════════════════════
-    # REF  Formula table
+    # REF
     # ══════════════════════════════════════════════════════════════════════════
     st.markdown('<hr class="div"><p class="sh"><span class="pill">REF</span>'
-                'Formula Reference</p>',
-                unsafe_allow_html=True)
+                'Formula Reference</p>', unsafe_allow_html=True)
 
     st.markdown("""
 <table class="rt">
@@ -1260,19 +1238,24 @@ conditions reverse completely.</p>
 </tr></thead>
 <tbody>
 <tr>
-  <td><strong>Δr — in-phase sources</strong></td>
+  <td><strong>Δr — in-phase</strong></td>
   <td class="tg">0, λ, 2λ, 3λ …</td>
-  <td class="tr">λ/2, 3λ/2, 5λ/2 …</td>
+  <td class="tr">½λ, 1½λ, 2½λ …</td>
 </tr>
 <tr>
-  <td><strong>Δr — anti-phase sources</strong></td>
-  <td class="tg">λ/2, 3λ/2, 5λ/2 …</td>
+  <td><strong>Δr — anti-phase</strong></td>
+  <td class="tg">½λ, 1½λ, 2½λ …</td>
   <td class="tr">0, λ, 2λ, 3λ …</td>
 </tr>
 <tr>
-  <td><strong>Line count (in-phase)</strong></td>
-  <td class="tg">2n<sub>max</sub> + 1</td>
-  <td class="tr">2n<sub>max</sub></td>
+  <td><strong>Total lines (in-phase)</strong></td>
+  <td class="tg">2n₀ + 1</td>
+  <td class="tr">2n₀</td>
+</tr>
+<tr>
+  <td><strong>Between S₁ S₂ (in-phase)</strong></td>
+  <td class="tg">2n₀ − 1</td>
+  <td class="tr">2n₀ − 2</td>
 </tr>
 <tr>
   <td><strong>Angle to n-th line</strong></td>
@@ -1280,9 +1263,9 @@ conditions reverse completely.</p>
   <td class="tr">sin θ = (n−½)λ/d</td>
 </tr>
 <tr>
-  <td><strong>Distance from centre (screen at L)</strong></td>
-  <td class="tg">x = nλL/d</td>
-  <td class="tr">x = (n−½)λL/d</td>
+  <td><strong>Screen position (small θ)</strong></td>
+  <td class="tg">xₙ = nλL/d</td>
+  <td class="tr">xₙ = (n−½)λL/d</td>
 </tr>
 <tr>
   <td><strong>Resultant amplitude</strong></td>
@@ -1296,9 +1279,9 @@ conditions reverse completely.</p>
     st.markdown("""
 <div class="keytip" style="margin-top:16px">
 💡 <strong>Remember:</strong>&nbsp;
-k = Δr ÷ λ &nbsp;—&nbsp;
-k is an <strong>integer</strong> → Antinode &nbsp;•&nbsp;
-k ends in <strong>.5</strong> → Node &nbsp;•&nbsp;
-Valid for in-phase sources only.
+k = Δr ÷ λ &nbsp;·&nbsp;
+k = integer → <strong>Antinode</strong> &nbsp;·&nbsp;
+k = n − ½ → <strong>Node</strong> &nbsp;·&nbsp;
+Anti-phase sources: swap every label.
 </div>
 """, unsafe_allow_html=True)
