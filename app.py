@@ -1,624 +1,584 @@
-import io
-import re
-import streamlit as st
-from visuals import get_plot_for_question
-from answers import ANSWERS
-from answer_keys import ANSWER_KEYS, check_answer
-from summary import render_summary
-from summary_standing_waves import render_standing_waves
-
-
-def _simplify_latex(expr: str) -> str:
-    """Convert LaTeX tokens inside an expression to Unicode/HTML (no outer span)."""
-    # degree symbol: ^{\circ}
-    expr = re.sub(r'\^\{\\circ\}', '°', expr)
-    # superscripts: ^{...}  ^x
-    expr = re.sub(r'\^\{([^}]+)\}', lambda m: f'<sup>{m.group(1)}</sup>', expr)
-    expr = re.sub(r'\^([0-9A-Za-z])', lambda m: f'<sup>{m.group(1)}</sup>', expr)
-    # square root: \sqrt{x}
-    expr = re.sub(r'\\sqrt\{([^}]+)\}', lambda m: f'√{m.group(1)}', expr)
-    # Greek & trig
-    expr = (expr
-            .replace(r'\lambda', 'λ')
-            .replace(r'\theta', 'θ')
-            .replace(r'\pi', 'π')
-            .replace(r'\sin', 'sin')
-            .replace(r'\cos', 'cos')
-            .replace(r'\tan', 'tan'))
-    # subscripts: _{...}  _x
-    expr = re.sub(r'_\{([^}]+)\}', lambda m: f'<sub>{m.group(1)}</sub>', expr)
-    expr = re.sub(r'_([0-9A-Za-z])', lambda m: f'<sub>{m.group(1)}</sub>', expr)
-    # strip remaining braces / backslashes
-    expr = expr.replace('{', '').replace('}', '').replace('\\', '')
-    return expr
-
-
-def render_math(text: str) -> str:
-    """Replace $...$ inline LaTeX with styled HTML spans."""
-    def _convert(m: re.Match) -> str:
-        inner = m.group(1)
-        # handle \frac{num}{den} before everything else
-        inner = re.sub(
-            r'\\frac\{([^}]+)\}\{([^}]+)\}',
-            lambda f: f'{_simplify_latex(f.group(1))}/{_simplify_latex(f.group(2))}',
-            inner,
-        )
-        html = _simplify_latex(inner)
-        return f'<span style="font-style:italic">{html}</span>'
-    return re.sub(r'\$([^$\n]+)\$', _convert, text)
-
-
-@st.cache_data(show_spinner=False)
-def _figure_png(q_num: int) -> bytes | None:
-    """Render question figure once and cache as PNG bytes."""
-    import matplotlib.pyplot as plt
-    fig = get_plot_for_question(q_num)
-    if fig is None:
-        return None
-    buf = io.BytesIO()
-    fig.savefig(buf, format="png", dpi=130, bbox_inches="tight")
-    buf.seek(0)
-    plt.close(fig)
-    return buf.getvalue()
-
-st.set_page_config(
-    page_title="ฟิสิกส์ ม.5 — คลื่นกล",
-    page_icon="🌊",
-    layout="wide",
-    initial_sidebar_state="expanded",
-)
-
-# ═══════════════════════════════════════════════════════════════════════════════
-# GLOBAL CSS
-# ═══════════════════════════════════════════════════════════════════════════════
-st.markdown("""
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap');
-
-/* ── Reset & base ─────────────────────────────────────────── */
-html, body, [class*="css"] {
-    font-family: 'Sarabun', 'Helvetica Neue', Arial, sans-serif;
-}
-.block-container {
-    padding: 1.2rem 1.8rem 2rem !important;
-    max-width: 1400px;
-}
-
-/* ── Hide Streamlit chrome ───────────────────────────────── */
-#MainMenu, footer, header { visibility: hidden; }
-
-/* ── Sidebar ─────────────────────────────────────────────── */
-section[data-testid="stSidebar"] {
-    background: #0f172a;
-    border-right: none;
-}
-section[data-testid="stSidebar"] * {
-    color: #e2e8f0 !important;
-}
-section[data-testid="stSidebar"] .stButton > button {
-    background: #1e293b !important;
-    border: 1px solid #334155 !important;
-    color: #94a3b8 !important;
-    border-radius: 6px !important;
-    padding: 0 !important;
-    font-size: 0.70rem !important;
-    min-height: 24px !important;
-    height: 24px !important;
-    line-height: 1 !important;
-    transition: all 0.15s ease !important;
-}
-section[data-testid="stSidebar"] .stButton > button:hover {
-    background: #2563eb !important;
-    border-color: #2563eb !important;
-    color: #fff !important;
-}
-section[data-testid="stSidebar"] .stButton > button[kind="primary"] {
-    background: #2563eb !important;
-    border-color: #1d4ed8 !important;
-    color: #fff !important;
-    font-weight: 700 !important;
-}
-section[data-testid="stSidebar"] [data-testid="stDownloadButton"] button {
-    background: #065f46 !important;
-    border-color: #047857 !important;
-    color: #fff !important;
-    border-radius: 8px !important;
-    font-weight: 600 !important;
-    height: auto !important;
-    min-height: 36px !important;
-    padding: 6px 12px !important;
-    font-size: 0.78rem !important;
-}
-
-/* ── Sidebar labels ──────────────────────────────────────── */
-.topic-label {
-    font-size: 0.68rem;
-    font-weight: 700;
-    color: #64748b !important;
-    margin: 10px 0 3px 0;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-}
-.sidebar-title {
-    font-size: 1.1rem;
-    font-weight: 700;
-    color: #f1f5f9 !important;
-    letter-spacing: 0.02em;
-}
-.sidebar-sub {
-    font-size: 0.72rem;
-    color: #64748b !important;
-    margin-top: 2px;
-}
-.progress-text {
-    font-size: 0.72rem;
-    color: #94a3b8 !important;
-    text-align: right;
-}
-
-/* ── Tabs ─────────────────────────────────────────────────── */
-.stTabs [data-baseweb="tab-list"] {
-    gap: 0;
-    background: #f8fafc;
-    border-radius: 10px 10px 0 0;
-    border-bottom: 2px solid #e2e8f0;
-    padding: 0 4px;
-}
-.stTabs [data-baseweb="tab"] {
-    height: 44px;
-    padding: 0 24px;
-    font-size: 0.88rem;
-    font-weight: 600;
-    color: #64748b;
-    border-radius: 8px 8px 0 0;
-    border: none;
-    background: transparent;
-}
-.stTabs [aria-selected="true"] {
-    color: #2563eb !important;
-    background: #fff !important;
-    border-bottom: 2px solid #2563eb !important;
-}
-
-/* ── Question header ─────────────────────────────────────── */
-.q-header-bar {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-bottom: 4px;
-}
-.q-num-badge {
-    background: #2563eb;
-    color: white;
-    font-size: 0.78rem;
-    font-weight: 700;
-    padding: 3px 10px;
-    border-radius: 20px;
-    white-space: nowrap;
-}
-.topic-chip {
-    background: #eff6ff;
-    color: #2563eb;
-    font-size: 0.72rem;
-    font-weight: 600;
-    padding: 3px 10px;
-    border-radius: 20px;
-    border: 1px solid #bfdbfe;
-}
-.q-title {
-    font-size: 1.45rem;
-    font-weight: 700;
-    color: #0f172a;
-    line-height: 1.3;
-    margin: 6px 0 14px 0;
-}
-
-/* ── Cards ────────────────────────────────────────────────── */
-.card {
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
-    border-radius: 12px;
-    padding: 20px 24px;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
-}
-.answer-card-header {
-    background: linear-gradient(135deg, #1e40af 0%, #2563eb 100%);
-    color: white;
-    border-radius: 10px 10px 0 0;
-    padding: 10px 18px;
-    font-size: 0.85rem;
-    font-weight: 700;
-    letter-spacing: 0.03em;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: -1px;
-}
-/* ── Answer card border color ─────────────────────────────── */
-[data-testid="stVerticalBlockBorderWrapper"] {
-    border-color: #c7d9f8 !important;
-    border-radius: 10px !important;
-    background: #f8faff !important;
-}
-
-/* ── Input section ───────────────────────────────────────── */
-.input-section-label {
-    font-size: 0.8rem;
-    font-weight: 700;
-    color: #475569;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    margin-bottom: 8px;
-    padding-top: 4px;
-}
-
-/* ── Divider ─────────────────────────────────────────────── */
-hr { border-color: #e2e8f0 !important; margin: 12px 0 !important; }
-
-/* ── Streamlit button overrides (main area) ─────────────── */
-.stButton > button {
-    border-radius: 8px !important;
-    font-weight: 600 !important;
-    font-size: 0.88rem !important;
-    transition: all 0.15s ease !important;
-}
-.stButton > button[kind="primary"] {
-    background: #2563eb !important;
-    border: none !important;
-}
-.stButton > button[kind="primary"]:hover {
-    background: #1d4ed8 !important;
-    box-shadow: 0 4px 12px rgba(37,99,235,0.35) !important;
-}
-
-/* ── Text input ──────────────────────────────────────────── */
-.stTextInput > div > div > input {
-    border-radius: 8px !important;
-    border: 1.5px solid #e2e8f0 !important;
-    font-size: 0.92rem !important;
-}
-.stTextInput > div > div > input:focus {
-    border-color: #2563eb !important;
-    box-shadow: 0 0 0 3px rgba(37,99,235,0.15) !important;
-}
-
-/* ── Success/Error ───────────────────────────────────────── */
-.stSuccess, .stError {
-    border-radius: 8px !important;
-    font-size: 0.88rem !important;
-}
-
-/* ── Caption / footer ───────────────────────────────────── */
-.app-footer {
-    text-align: center;
-    color: #94a3b8;
-    font-size: 0.72rem;
-    padding: 16px 0 4px;
-    border-top: 1px solid #f1f5f9;
-    margin-top: 24px;
-}
-</style>
-""", unsafe_allow_html=True)
-
-# ═══════════════════════════════════════════════════════════════════════════════
-# QUESTION BANK
-# ═══════════════════════════════════════════════════════════════════════════════
-raw_questions = r"""เชือกเส้นหนึ่งสั่นด้วยความถี่ค่าหนึ่ง ทำให้เกิดคลื่นต่อเนื่องเคลื่อนที่ไปทางขวาดังรูปที่ (1) เป็นภาพถ่ายการสั่นของเส้นเชือกในช่วงหนึ่งและในขณะที่คลื่นเคลื่อนที่ไป อนุภาคของเส้นเชือก การเคลื่อนที่ ขึ้น - ลง ซึ่งเมื่อเขียนกราฟแสดงความสัมพันธ์ระหว่างการกระจัดกับเวลาจะได้ดัง รูปที่ (2) จงหาอัตราเร็วของคลื่นบนเส้นเชือก
-ในการสั่นเชือกที่มีความยาวมากเส้นหนึ่ง ปรากฏว่าหลังจากการสั่น 0.5 วินาที ได้คลื่นดังรูป จงหาอัตราเร็วของคลื่นบนเชือกเส้นนี้
-เชือกที่ยาวมาก และสม่ำเสมอเส้นหนึ่งถูกขึงตึง ถ้าเราสะบัดปลายเชือกอีกข้างหนึ่ง ขึ้นลงอย่างสม่ำเสมอ เป็นเวลา 0.5 วินาที รูปร่างของเส้นเชือกจะเปลี่ยนแปลงดังรูป จงหา (ก) ความยาวคลื่น (ข) อัตราเร็วของคลื่น (ค) ความถี่ของคลื่น (ง) ความถี่ที่สะบัดปลายเชือก
-จากรูปแสดงถึงการกระจัดของอนุภาคหนึ่งในตัวกลางเมื่อมีคลื่นผ่านโดยคลื่นที่ผ่านมีความเร็ว 20 เมตร/วินาที จงหาความยาวคลื่นของคลื่นที่กำลังเคลื่อนที่
-เชือกยาวมากเส้นหนึ่งกำลังสั่น เมื่อมองเพียงส่วนหนึ่งซึ่งยาว 3.0 เมตร เห็นคลื่นในเส้นเชือกดังรูป (ก) แต่พอ 2 วินาที ต่อมาเปลี่ยนเป็นรูป (ข) จงหาอัตราเร็วของคลื่นที่มีค่าน้อยที่สุดเท่าไร
-แหล่งกำเนิดคลื่นผิวน้ำสั่นด้วยความถี่ 20 รอบ/วินาที และพบว่าสันคลื่นน้ำ 5 สันติดต่อกันห่างกัน 20 เซนติเมตร จงหาอัตราเร็วของคลื่นผิวน้ำ
-น้องดายืนอยู่ที่ท่าน้ำ สังเกตเห็นคลื่นผิวน้ำที่เกิดจากเรือวิ่งกระทบฝั่ง 20 ลูกคลื่นในเวลา 10 วินาที และทราบว่าอัตราเร็วของคลื่นผิวน้ำ 10 เมตร/วินาที อยากทราบว่าสันคลื่นที่อยู่ติดกันห่างกันเท่าไร
-ชรินทร์โยนก้อนหินลงน้ำ ทำให้เกิดคลื่นผิวน้ำ 3 ลูกคลื่นวิ่งตามกันมา ถ้าตำแหน่งก้อนหินกระทบผิวน้ำห่างออกไป 10 เมตร พบว่าคลื่นลูกแรกวิ่งมาถึงฝั่งใช้เวลา 5 วินาที คลื่นลูกถัดไปมาถึงเมื่อเวลา 5.5 และ 6.0 วินาทีตามลำดับ จงหาความยาวคลื่นผิวน้ำที่เกิด
-บัวตองยืนอยู่ริมฝั่งโขงสังเกตเห็นคลื่นผิวน้ำเคลื่อนกระทบฝั่ง มีระยะห่างระหว่างสันคลื่นที่อยู่ติดกัน 10 เมตร และคลื่นมีอัตราเร็ว 5 เมตร/วินาที อยากทราบว่าคลื่นขบวนนี้จะเคลื่อนกระทบฝั่งนาทีละกี่ลูก
-แหล่งกำเนิดคลื่นน้ำจะต้องสั่นด้วยความถี่เท่าไร จึงทำให้เกิดคลื่นน้ำเคลื่อนที่ได้ทาง 40 เมตร ในเวลา 5 วินาที และมีระยะห่างของสันคลื่นจากสันที่ 1 ถึงสันที่ 5 เท่ากับ 2 เมตร
-เชือกเส้นหนึ่งยาว 4 เมตร มีมวล 40 กรัม ปลายข้างหนึ่งติดกับเครื่องเคาะ ซึ่งสั่นอย่างสม่ำเสมอปลายอีกข้างหนึ่งมีแรงดึง 25 นิวตัน จงหาอัตราเร็วของคลื่นบนเส้นเชือก
-เชือกเส้นหนึ่งเมื่อมีความตึง 45 นิวตัน พบว่าคลื่นบนเส้นเชือกมีอัตราเร็ว 30 เมตร/วินาที ถ้าลดความตึงเหลือ 20 นิวตัน อัตราเร็วของคลื่นบนเส้นเชือกมีค่าเท่าใด
-คลื่นดลกำลังเคลื่อนที่จากซ้ายไปขวาด้วยอัตราเร็วคงที่ 20 ช่อง/วินาที ณ เวลาเริ่มต้น $t = 0$ เห็นคลื่นดังรูป เขียนรูปร่างคลื่น เมื่อเวลา 0.1, 0.2, 0.3, 0.4 และ 0.5 วินาที
-เชือกเบาเส้นหนึ่งขึงตรึงในแนวระดับ แล้วสั่นที่ปลายข้างหนึ่งให้มีการกระจัดเป็นฟังก์ชันรูปไซน์ด้วยความถี่ 50 เฮิรตซ์ พบว่าคลื่นที่เกิดเคลื่อนที่ไปทางแกน +x ด้วยอัตราเร็ว 20 เมตร/วินาที จงหา ก. ความยาวคลื่นในเส้นเชือก ข. รูปร่างคลื่นจะเป็นอย่างไรเมื่อเวลาผ่านไป 0.1 วินาที
-ลูกตุ้มอย่างง่ายผูกติดกับสายแขวนยาว 80 เซนติเมตร จงหาความถี่ธรรมชาติของการแกว่งของลูกตุ้มอย่างง่ายนี้
-วัตถุมวล 0.4 กิโลกรัมติดกับปลายข้างหนึ่งของสปริงเส้นหนึ่งที่มีค่าคงตัวของสปริง 160 นิวตัน/เมตร ส่วนปลายของสปริงอีกข้างหนึ่งยึดติดกับเพดาน เมื่อออกแรงดึงวัตถุให้เคลื่อนที่ลงในแนวดิ่งเล็กน้อย แล้วปล่อยวัตถุจะสั่นขึ้นลงด้วยความถี่เท่าใด
-ก. จงบอกตำแหน่งที่มีเฟสตรงกันกับจุด a, b, c, d, e, f, g, h, i ข. จงบอกตำแหน่งที่มีเฟสตรงข้ามกับจุด a, b, c, d, e, f, g, h, i วิเคราะห์โจทย์
-คลื่นต่อเนื่องขบวนหนึ่งมีอัตราเร็ว 20 เมตร/วินาที เกิดจากแหล่งกำเนิดซึ่งสั่นด้วยความถี่ 40 เฮิรตซ์ ก. จุด 2 จุดบนคลื่นห่างกัน 10 เซนติเมตร จะมีเฟสต่างกันเท่าไร ข. จุด 2 จุดบนคลื่นมีเฟสต่างกัน $90^{\circ}$ จะห่างกันเท่าไร
-คลื่นขบวนหนึ่งมีความถี่ 20 เฮิรตซ์ ระยะห่างระหว่างจุด 2 จุด ที่มีเฟสต่างกัน $\frac{\pi}{6}$ เรเดียน เป็น 0.5 เมตร จงหาอัตราเร็วของคลื่นนี้
-จากรูปคลื่นมีอัตราเร็ว 2 เมตร/วินาที จุด 2 จุด บนคลื่นที่มีเฟสต่างกัน $\frac{3\pi}{2}$ เรเดียน จะอยู่ห่างกันเท่าไร
-คลื่นต่อเนื่องขบวนหนึ่งเกิดจากแหล่งกำเนิดที่สั่น 40 รอบ/วินาที วัดอัตราเร็วคลื่นได้ 10 เมตร/วินาที จุด 2 จุดบนคลื่นซึ่งห่างกัน 1.5 เมตร จะมีเฟสต่างกันเท่าไร
-คลื่นต่อเนื่องสองขบวน มีความถี่ 120 Hz และ 122 Hz เริ่มเคลื่อนที่ออกจากจุดเดียวกันด้วยเฟสตรงกัน เมื่อเวลา 1.2 วินาที คลื่นทั้งสองจะมีเฟสต่างกันเท่าไร
-คลื่นผิวน้ำต่อเนื่องกระจายออกจากแหล่งกำเนิดคลื่น ซึ่งมีความถี่ 20 เฮิรตซ์ มีอัตราเร็ว 40 เซนติเมตร/วินาที ณ ตำแหน่งที่อยู่ห่างจากแหล่งกำเนิดเป็นระยะ 20 และ 21 เซนติเมตร จะมีเฟสต่างกันกี่องศา
-แหล่งกำเนิด $S_1, S_2$ ให้คลื่นเฟสตรงกัน มีความยาวคลื่น 8 และ 10 เซนติเมตร ตามลำดับ จงหา ณ จุด P ที่อยู่ห่างจากแหล่งกำเนิด $S_1$ และ $S_2$ เป็นระยะ 20 และ 30 เซนติเมตร ดังรูป จะมีเฟสต่างกันเท่าใด
-คลื่นต่อเนื่องขบวนหนึ่งเกิดจากแหล่งกำเนิด ซึ่งมีความถี่ 50 เฮิรตซ์ มีอัตราเร็ว 40 เมตร/วินาที จงหา ก. ณ จุดใดจุดหนึ่ง เมื่อเวลาผ่านไป 0.03 วินาที จะมีเฟสเปลี่ยนไปเท่าใด ข. ณ เวลาใดเวลาหนึ่ง จุด 2 จุด ห่างกัน 1 เมตร จะมีเฟสต่างกันเท่าใด
-ส่งคลื่นที่มีความถี่ 200 เฮิรตซ์ออกไปโดยมีเฟสเริ่มต้น $60^{\circ}$ ต่อมาอีก 1.2 วินาทีก็ส่งคลื่นที่มีความถี่ 180 เฮิรตซ์ ออกไปโดยมีเฟสเริ่มต้น $30^{\circ}$ หลังจากนั้นนานเท่าใด จึงจะมีเฟสต่างกัน $90^{\circ}$ เป็นครั้งแรกและครั้งที่สอง
-ส่งคลื่นความถี่ 240 เฮิรตซ์ออกไปโดยมีเฟสเริ่มต้น $50^{\circ}$ ต่อมาอีก 0.6 วินาที ก็ส่งคลื่นความถี่ 280 เฮิรตซ์ ออกไปโดยมีเฟสเริ่มต้น $20^{\circ}$ หลังจากนั้นนานเท่าใดจึงจะมีเฟสตรงกันเป็นครั้งแรก
-จงเขียนรูปร่างของคลื่นซึ่งเกิดการซ้อนทับของคลื่นที่เคลื่อนที่เข้าหากันดังต่อไปนี้ทุกๆ วินาทีเป็นเวลา 5 วินาที กำหนดให้คลื่นมีอัตราเร็ว 2 ช่องต่อวินาที
-จงเขียนรูปร่างของคลื่นซึ่งเกิดการซ้อนทับของคลื่นที่เคลื่อนที่เข้าหากันดังต่อไปนี้ทุกๆ วินาทีเป็นเวลา 5 วินาที กำหนดให้คลื่นมีอัตราเร็ว 2 ช่องต่อวินาที
-คลื่นดลในเส้นเชือกมีอัตราเร็ว 4 ช่องต่อวินาที เมื่อเวลา $t = 0$ ดังรูป จงหาลักษณะของคลื่นเมื่อเวลาผ่านไป 2, 3, 4 วินาที ตามลำดับ
-คลื่นดลในเส้นเชือกมีอัตราเร็ว 4 ช่องต่อวินาที เคลื่อนที่ตกกระทบจุดสะท้อนอิสระ เมื่อเวลา $t = 0$ เป็นดังรูป จงหาลักษณะของคลื่นเมื่อเวลาผ่านไป 2, 3 และ 4 วินาที ตามลำดับ
-คลื่นน้ำในถาดคลื่นมีอัตราเร็วในน้ำลึกเป็น 2 เท่าของอัตราเร็วคลื่นในน้ำตื้น ถ้าคลื่นเคลื่อนที่จากน้ำลึกไปสู่น้ำตื้น โดยทำมุมตกกระทบ $60^{\circ}$ จงหามุมหักเหของคลื่นน้ำในน้ำตื้น
-คลื่นน้ำในถาดคลื่นพบว่าบริเวณน้ำลึกระยะห่างระหว่างหน้าคลื่นที่ติดกันเท่ากับ 2 เซนติเมตร และบริเวณน้ำตื้นระยะห่างระหว่างหน้าคลื่นที่ติดกันเท่ากับ 1.5 เซนติเมตร ถ้ามุมระหว่างหน้าคลื่นในน้ำตื้นทำมุม $30^{\circ}$ กับรอยต่อของน้ำลึกและน้ำตื้น อยากทราบว่ามุมระหว่างหน้าคลื่นในน้ำลึกกับรอยต่อของน้ำลึกและน้ำตื้นเป็นเท่าใด
-เมื่อคลื่นหน้าตรงเคลื่อนที่จากบริเวณ A ไปสู่บริเวณ B ในถาดคลื่น ทำให้เกิดการหักเหของคลื่น ปรากฏดังภาพ ถ้าแหล่งกำเนิดคลื่นมีความถี่ 40 Hz อัตราเร็วของคลื่นในบริเวณ B จะมีค่าเท่าไร
-คลื่นน้ำขบวนหนึ่งเคลื่อนที่จากบริเวณน้ำตื้นไปสู่บริเวณน้ำลึก โดยแนวทางเดินของคลื่นตกกระทบทำมุมตกกระทบ $30^{\circ}$ ถ้าความยาวคลื่นในบริเวณน้ำลึกเป็น $\sqrt{3}$ เท่าของความยาวคลื่นในน้ำตื้น จงหามุมหักเห
-คลื่นน้ำในถาดคลื่น เคลื่อนที่จากบริเวณน้ำลึกไปสู่บริเวณน้ำตื้น โดยมีมุมตกกระทบ $45^{\circ}$ และมุมหักเห $30^{\circ}$ ถ้าระยะห่างของหน้าคลื่นหักเหที่ติดกันวัดได้ $2\sqrt{2}$ เซนติเมตร และแหล่งกำเนิดคลื่นมีความถี่ 20 Hz จงหาอัตราเร็วคลื่นตกกระทบ
-คลื่นน้ำมีอัตราเร็วในน้ำลึกเป็น 5/3 เท่าของอัตราเร็วในน้ำตื้น คลื่นจะต้องตั้งต้นเคลื่อนที่จากบริเวณใด จึงจะเกิดมุมวิกฤตได้ และมุมวิกฤตมีค่าเท่าใด
-ถ้าอัตราเร็วของคลื่นในบริเวณน้ำลึก เป็น 2 เท่าของอัตราเร็วของคลื่นในบริเวณน้ำตื้น จงหามุมตกกระทบที่ทำให้เกิดการสะท้อนกลับหมด
-คลื่นน้ำในถาดคลื่น เคลื่อนที่จากน้ำตื้นไปสู่น้ำลึก โดยมีมุมตกกระทบ $30^{\circ}$ และมุมหักเห $45^{\circ}$ ถ้าเปลี่ยนมุมตกกระทบเป็น $45^{\circ}$ มุมหักเหจะมีขนาดเท่าใด
-แหล่งกำเนิดคลื่นน้ำสั่นด้วยความถี่ 8 เฮิรตซ์ วัดอัตราเร็วของคลื่นน้ำได้ 4 เมตร/วินาที เมื่อคลื่นน้ำเคลื่อนที่เข้าไปในบริเวณที่ตื้นกว่าเดิม โดยหน้าคลื่นตกกระทบทำมุม $\theta_1$ กับรอยต่อระหว่างตัวกลางพบว่าหน้าคลื่นหักเหทำมุม $\theta_2$ กับรอยต่อระหว่างตัวกลาง และระยะห่างของหน้าคลื่นหักเหที่ถัดกัน 5 แนวห่างกัน 1.8 เมตร จงหาอัตราส่วน $\sin\theta_1$ ต่อ $\sin\theta_2$
-คลื่นน้ำเคลื่อนที่ผ่านบริเวณที่มีความลึกต่างกัน เกิดปรากฏการณ์ดังรูป ในบริเวณ (ก) หน้าคลื่นอยู่ห่างกัน 12 เซนติเมตร ในบริเวณ (ข) คลื่นมีความเร็ว $6\sqrt{2}$ เซนติเมตร/วินาที ถ้าต้นกำเนิดมาจากบริเวณ (ก) ความถี่ของต้นกำเนิดคลื่นมีค่าเท่าใด
-กำหนดให้คลื่นน้ำหน้าตรงตกกระทบรอยต่อของบริเวณน้ำลึกและน้ำตื้นดังรูป จงเขียนภาพคลื่นหักเห
-แหล่งกำเนิดอาพันธ์ 2 แหล่งห่างกัน 10 เซนติเมตร ให้คลื่นมีความยาวคลื่นเท่ากัน 2.5 เซนติเมตร เฟสตรงกัน จงหาว่าตำแหน่งต่อไปนี้อยู่บนแนวบัพหรือปฏิบัพที่เท่าใด ก. จุด A อยู่ห่างจากแหล่งกำเนิดทั้งสองเป็นระยะ 12 เซนติเมตร และ 17 เซนติเมตร ข. จุด B อยู่ห่างจากแหล่งกำเนิดทั้งสองเป็นระยะ 14.5 เซนติเมตร และ 15.75 เซนติเมตร ค. จุด C อยู่ห่างจากแหล่งกำเนิดทั้งสองเป็นระยะ 16 เซนติเมตร และ 24 เซนติเมตร
-แหล่งกำเนิดอาพันธ์ 2 แหล่งเฟสตรงกัน ห่างกัน 12 เซนติเมตร มีความถี่เท่ากัน 10 เฮิรตซ์ และคลื่นเคลื่อนที่ด้วยอัตราเร็ว 40 เซนติเมตร/วินาที เท่ากัน จงหา ก. จุด X อยู่ห่างจากแหล่งกำเนิดทั้งสองเป็นระยะ 19 และ 25 เซนติเมตร ตามลำดับ จุด X จะอยู่บนแนวเสริมหรือหักล้างกันที่เท่าใด ข. จำนวนบัพและปฏิบัพที่เกิดขึ้นทั้งหมด
-$S_1$ และ $S_2$ เป็นแหล่งกำเนิดอาพันธ์ห่างกัน 10 เซนติเมตร ให้คลื่นเฟสตรงกันและมีระยะห่างระหว่างหน้าคลื่น 2 เซนติเมตร ก. บนแนวเส้นตรง $S_1, S_2$ มีแนวปฏิบัพและบัพกี่แนว ข. ระหว่าง $S_1, S_2$ มีแนวปฏิบัพและบัพกี่แนว
-$S_1$ และ $S_2$ เป็นแหล่งกำเนิดอาพันธ์ให้เฟสตรงข้ามกันห่างกัน 10 เซนติเมตร ให้คลื่นมีความยาวคลื่น 4 เซนติเมตร จงหาแนวปฏิบัพและบัพที่เกิดขึ้นระหว่าง $S_1$ และ $S_2$
-จากการทดลองการแทรกสอดของคลื่นจากแหล่งกำเนิด $S_1$ และ $S_2$ ซึ่งมีเฟสตรงกัน ความถี่เท่ากัน วางห่างกัน $d$ ทำให้เกิดภาพการแทรกสอดในถาดคลื่นดังรูป โดยที่เส้นทึบแสดงแนวปฏิบัพ และเส้นประแสดงแนวบัพ ดังนั้นระยะห่างระหว่างแหล่งกำเนิดทั้งสองควรเป็นเท่าไรในเทอมของความยาวคลื่น
-$S_1$ และ $S_2$ เป็นแหล่งกำเนิดอาพันธ์ มีเฟสตรงกัน ห่างกัน $a$ ให้คลื่นมีความยาวคลื่นเท่ากันคือ $\lambda$, P เป็นจุดที่เกิดการแทรกสอดแบบเสริมกันจุดที่ 2 จากแนวกลาง อยากทราบว่า $\theta$ จะมีค่าเท่าใด
-แหล่งกำเนิดอาพันธ์ 2 แหล่งให้เฟสตรงกัน ห่างกัน 6 เซนติเมตรปรากฏว่าแนวเสริมกันครั้งแรกเบนออกจากแนวกลาง $30^{\circ}$ จงหาความยาวคลื่นจากแหล่งกำเนิดทั้งสอง
-$S_1$ และ $S_2$ เป็นแหล่งกำเนิดอาพันธ์สองแหล่ง ห่างกัน 10 เซนติเมตร มีเฟสตรงกัน ความยาวคลื่น 1 เซนติเมตร จงหาระยะ x ซึ่งเป็นระยะจากแนวกลางไปยังตำแหน่งเสริมกันครั้งแรกจากแนวกลาง ดังรูป โดยระยะ $OA_0 = 60$ เซนติเมตร
-จากรูป จุดกำเนิดคลื่นน้ำ S อยู่ห่างจากผิวสะท้อน 8 เซนติเมตร กระจายคลื่นที่มีความยาวคลื่น 4 เซนติเมตร ออกโดยรอบ ถ้าจุด P เป็นจุดใดๆ ซึ่งอยู่ห่างจาก S เป็นระยะ 12 เซนติเมตร จงหาว่าจุด P จะอยู่บนแนวอะไรของการแทรกสอด
-จากรูป $S_1$ และ $S_2$ เป็นแหล่งกำเนิดอาพันธ์มีเฟสตรงกัน ให้คลื่นมีความถี่ 20 เฮิรตซ์ อยู่ห่างกัน 2 เมตร วัดอัตราเร็วของคลื่นได้ 10 เมตร/วินาที จงหาตำแหน่งของจุดที่แนวปฏิบัพตัดแนว $S_1P$ ซึ่งตั้งฉากกับเส้น $S_1$ และ $S_2$
-ลวดเส้นหนึ่งยาว 40 เซนติเมตร ปลายทั้งสองถูกขึงตึง เมื่อดีดลวดตรงกลางทำให้เส้นลวดสั่นขึ้นลงด้วยความถี่ 20 เฮิรตซ์ จงหาอัตราเร็วของคลื่นในลวดเส้นนี้
-เชือกเส้นหนึ่งยาว 3 เมตร ปลายข้างหนึ่งยึดติดกับกำแพง จับปลายอีกข้างหนึ่งสะบัดขึ้นลงอย่างสม่ำเสมอทำให้เกิดคลื่นมีความยาวคลื่น 0.5 เมตร จงหาว่าระหว่างปลายเส้นเชือกทั้งสองมีตำแหน่งบัพและปฏิบัพกี่ตำแหน่ง
-แหล่งกำเนิดคลื่นน้ำในถาดคลื่นอยู่ห่างจากผิวสะท้อนระนาบตรง 20 เซนติเมตร ให้คลื่นมีความยาวคลื่น 4 เซนติเมตร ตกกระทบผิวสะท้อนในแนวตั้งฉาก จงหาว่าระหว่างแหล่งกำเนิดและผิวสะท้อนจะมีตำแหน่งบัพและปฏิบัพกี่ตำแหน่ง
-คลื่นต่อเนื่องในขดสปริง มีความยาวคลื่น 8 เซนติเมตร เคลื่อนที่ไปยังปลายข้างหนึ่งซึ่งยึดแน่นไว้ ถ้าลวดสปริงยาว 20 เซนติเมตร จะเกิดคลื่นนิ่งมีบัพกี่บัพ และมีปฏิบัพกี่ปฏิบัพ
-คลื่นนิ่งมีระยะห่างของบัพที่ติดกัน 10 เซนติเมตร ถ้าอัตราเร็วของคลื่น 160 เซนติเมตร/วินาที จงหาความถี่ของแหล่งกำเนิด
-ในการทดลองคลื่นนิ่งบนเส้นเชือก ถ้าความถี่ของคลื่นนิ่งเป็น 500 เฮิรตซ์ และอัตราเร็วของคลื่นในเส้นเชือกเท่ากับ 400 เมตรต่อวินาที ตำแหน่งบัพสองตำแหน่งที่อยู่ถัดกันจะห่างกันเท่าไร
-เชือกเบาเส้นหนึ่งยาว 1.25 เมตร ถูกขึงตึงที่ปลายทั้งสองข้าง เมื่อทำให้เชือกสั่นวัดอัตราเร็วได้ 160 เมตรต่อวินาที ถ้าคลื่นในเส้นเชือกเกิดการสั่นพ้องได้ต้องให้ความถี่เข้าไปเท่าไร
-เส้นลวดยาว 1.20 เมตร ปลายทั้งสองถูกขึงตึง เมื่อลวดสั่นด้วยความถี่ 320 เฮิรตซ์ จะเกิดการสั่นพ้องในขั้นโอเวอร์โทนที่ 2 จงหาอัตราเร็วของคลื่นในลวดเส้นนี้
-เชือกเส้นหนึ่งยาว 90 เซนติเมตรหนัก 56.25 กรัม ถูกทำให้สั่นด้วยความถี่เท่าไร จึงจะเกิดการสั่นพ้องในขั้นฮาร์โมนิกที่ 4 ขณะนั้นเชือกมีความตึง 100 นิวตัน
-สายกีตาร์ยาว 1 เมตร มีมวล 12.96 กรัม ถูกขึงตึงที่จุดสองจุดห่างกัน 75 เซนติเมตร เมื่อทำให้สายกีตาร์สั่นวัดความตึงในสายกีตาร์ได้ 40 นิวตัน พบว่าเกิดการสั่นพ้องขึ้นในสายกีตาร์ แต่เมื่อเพิ่มความตึงขึ้นเป็น 90 นิวตัน ปรากฏว่าเกิดการสั่นพ้องขึ้นในสายกีตาร์ในขั้นถัดไป จงหาจำนวน loop ของคลื่นนิ่งที่เกิดทั้งสองครั้ง
-ช่องเปิดเดี่ยวกว้าง 6 เซนติเมตร ให้คลื่นหน้าตรงมีความยาวคลื่น 2 เซนติเมตร เคลื่อนที่ผ่าน จงหาแนวบัพที่เกิดขึ้นทั้งหมด
-คลื่นน้ำหน้าตรงมีความยาวคลื่น 2.5 เซนติเมตร ผ่านอย่างตั้งฉากกับช่องเปิดเดี่ยวซึ่งกว้าง 8 เซนติเมตร จงหา ก. แนวบัพที่เกิดขึ้นทั้งหมด ข. แนวบัพที่ 2 เบนจากแนวกลางเท่าไร ค. แนวปฏิบัพแรกเบนจากแนวกลางเท่าไร
-คลื่นหน้าตรงต่อเนื่องเคลื่อนที่ผ่านช่องเปิดเดี่ยวโดยหน้าคลื่นขนานกับช่องเปิดนี้ปรากฏว่าเกิดบัพ 6 แนวพอดี ถ้าความกว้างของช่องเปิดเพิ่มขึ้นเป็นสองเท่าของเดิมและความถี่ของคลื่นลดลงเป็น 1/3 เท่าของเดิม จะเกิดแนวบัพผ่านช่องเปิดกี่แนว
-ช่องแคบเดี่ยวจะต้องกว้างเท่าไรจึงจะทำให้คลื่นที่มีความยาวคลื่น 3 เซนติเมตร ผ่านแล้วเกิดแนวบัพทั้งหมด 6 แนว
-ช่องเดี่ยวกว้าง 4 เซนติเมตร จะต้องให้คลื่นมีความยาวคลื่นเท่าไร ผ่านในแนวตั้งฉากกับช่องเดี่ยวนี้ จึงจะทำให้เกิดแนวบัพรอบช่องเดี่ยว 4 แนว
-ช่องแคบคู่อยู่ห่างกัน 8 เซนติเมตร ในถาดคลื่น ถ้าทำให้เกิดคลื่นหน้าตรงผ่านช่องแคบคู่นั้นในแนวตั้งฉาก ทำให้เกิดการแทรกสอดขึ้น ถ้าจุด A อยู่บนแนวปฏิบัพที่ 2 ซึ่งอยู่ห่างจากช่องแคบทั้งสองเป็นระยะ 10 เซนติเมตร และ 14 เซนติเมตร ตามลำดับ จงหา ก. ความยาวคลื่นน้ำ ข. แนวบัพและปฏิบัพที่เกิดขึ้นทั้งหมด
 """
-questions = [q.strip() for q in raw_questions.strip().split("\n") if q.strip()]
+summary_diffraction.py
+Summary tab: Single-Slit Diffraction  (🔬 การเลี้ยวเบน)
+English-only, card-based layout — matches standing-waves style.
+"""
 
-# ── Topic groups ──────────────────────────────────────────────────────────────
-TOPICS = [
-    ("🌊 สมบัติพื้นฐาน",     list(range(1,  13))),
-    ("📦 คลื่นดล",            list(range(13, 15))),
-    ("🔁 SHM",                list(range(15, 17))),
-    ("📐 เฟส",                list(range(17, 28))),
-    ("➕ การซ้อนทับ",         list(range(28, 32))),
-    ("↗️ การหักเห",           list(range(32, 43))),
-    ("🌀 การแทรกสอด",         list(range(43, 53))),
-    ("🎵 คลื่นนิ่ง/สั่นพ้อง", list(range(53, 63))),
-    ("🔬 การเลี้ยวเบน",       list(range(63, 69))),
-]
+import numpy as np
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
+from matplotlib.patches import Arc, FancyBboxPatch, Rectangle
+import streamlit as st
 
-# ── Session state ─────────────────────────────────────────────────────────────
-if "results"    not in st.session_state: st.session_state.results    = {}
-if "selected_q" not in st.session_state: st.session_state.selected_q = 1
-if "show_ans"   not in st.session_state: st.session_state.show_ans   = False
+# ── colour palette (shared with other summaries) ──────────────────────────────
+CB   = '#2563eb'   # blue
+CR   = '#dc2626'   # red
+CG   = '#16a34a'   # green
+CRED = '#dc2626'
+CGR  = '#64748b'   # slate-grey
+CDK  = '#0f172a'   # near-black
+CBG  = '#f8fafc'   # page background
+CPURP= '#7c3aed'   # purple
+
+RC = {
+    'font.family':  'DejaVu Sans',
+    'axes.facecolor': CBG,
+    'figure.facecolor': CBG,
+    'text.color': CDK,
+    'axes.labelcolor': CGR,
+    'xtick.color': CGR,
+    'ytick.color': CGR,
+}
+
+# ── CSS ───────────────────────────────────────────────────────────────────────
+_CSS = """
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+.dif-wrap  { font-family:'Inter',sans-serif; color:#0f172a; max-width:820px; margin:0 auto; }
+.dif-h1    { font-size:1.55rem; font-weight:800; color:#1e3a8a;
+             border-bottom:3px solid #2563eb; padding-bottom:6px; margin:0 0 20px; }
+.dif-h2    { font-size:1.05rem; font-weight:700; color:#1e40af; margin:22px 0 10px; }
+
+/* section card */
+.dif-card  { background:#fff; border:1px solid #e2e8f0; border-radius:12px;
+             padding:18px 20px 14px; margin-bottom:16px;
+             box-shadow:0 1px 4px rgba(0,0,0,.05); }
+.dif-card-title {
+             font-size:.85rem; font-weight:700; text-transform:uppercase;
+             letter-spacing:.06em; color:#64748b; margin-bottom:10px; }
+.dif-tag   { display:inline-block; font-size:.72rem; font-weight:700;
+             border-radius:6px; padding:2px 8px; margin-right:6px; }
+.tag-blue  { background:#dbeafe; color:#1d4ed8; }
+.tag-red   { background:#fee2e2; color:#b91c1c; }
+.tag-green { background:#dcfce7; color:#15803d; }
+.tag-purp  { background:#ede9fe; color:#6d28d9; }
+
+/* formula box */
+.dif-formula {
+             background:#f1f5f9; border-left:4px solid #2563eb;
+             border-radius:0 8px 8px 0; padding:10px 16px;
+             font-size:1.05rem; font-weight:600; color:#1e3a8a;
+             margin:8px 0; font-family:'Courier New',monospace; }
+
+/* two-col grid */
+.dif-grid  { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+.dif-grid3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; }
+
+/* mini info box */
+.dif-info  { background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px;
+             padding:10px 14px; font-size:.83rem; line-height:1.7; }
+.dif-info b { color:#1e40af; }
+
+/* highlight box */
+.dif-hl    { background:#eff6ff; border:1.5px solid #93c5fd; border-radius:8px;
+             padding:10px 16px; margin:8px 0; font-size:.88rem; line-height:1.75; }
+.dif-hl-g  { background:#f0fdf4; border-color:#86efac; }
+.dif-hl-r  { background:#fff5f5; border-color:#fca5a5; }
+.dif-hl-p  { background:#f5f3ff; border-color:#c4b5fd; }
+
+/* ref table */
+.dif-ref   { width:100%; border-collapse:collapse; font-size:.82rem; }
+.dif-ref th{ background:#1e3a8a; color:#fff; padding:7px 12px; text-align:left; }
+.dif-ref td{ padding:6px 12px; border-bottom:1px solid #e2e8f0; }
+.dif-ref tr:nth-child(even) td { background:#f8fafc; }
+</style>
+"""
 
 
-def _select(q: int):
-    st.session_state.selected_q = q
-    st.session_state.show_ans   = False
+# ── Figures ───────────────────────────────────────────────────────────────────
+
+@st.cache_data
+def _fig_geometry():
+    """Single-slit geometry diagram: slit width a, angle θ, nodal/antinodal lines."""
+    with plt.rc_context(RC):
+        fig, ax = plt.subplots(figsize=(9, 5.2))
+        ax.set_facecolor('#f0f7ff')
+        fig.patch.set_facecolor('#f0f7ff')
+        ax.set_aspect('equal')
+        ax.axis('off')
+
+        a    = 3.0   # slit width (display units)
+        lam  = 1.0
+        nmax = int(a / lam)   # = 3
+        X_SC = 7.5            # screen x-position
+        Y_MAX = 4.5
+
+        ax.set_xlim(-3.5, X_SC + 2.0)
+        ax.set_ylim(-Y_MAX, Y_MAX + 0.4)
+
+        # ── barrier ──────────────────────────────────────────────────
+        bw = 0.22
+        for y0, y1 in [(-Y_MAX, -a/2), (a/2, Y_MAX)]:
+            ax.add_patch(Rectangle((-bw, y0), 2*bw, y1-y0,
+                                   fc='#475569', ec='none', alpha=0.88, zorder=6))
+        ax.text(-bw-0.15, -Y_MAX+0.1, 'Barrier',
+                color='#475569', fontsize=7.5, ha='right', va='bottom',
+                fontweight='700', zorder=9)
+
+        # ── slit opening markers ──────────────────────────────────────
+        ax.plot(0,  a/2, 'D', color=CB, ms=8, zorder=10,
+                markeredgecolor='white', markeredgewidth=1.4)
+        ax.plot(0, -a/2, 'D', color=CB, ms=8, zorder=10,
+                markeredgecolor='white', markeredgewidth=1.4)
+        ax.plot(0,    0, 's', color=CPURP, ms=7, zorder=10,
+                markeredgecolor='white', markeredgewidth=1.3)
+        ax.text(0.3,  a/2, 'top edge', color=CB,
+                fontsize=7.5, va='center', fontweight='600')
+        ax.text(0.3, -a/2, 'bottom edge', color=CB,
+                fontsize=7.5, va='center', fontweight='600')
+        ax.text(0.3,    0, 'centre', color=CPURP,
+                fontsize=7.5, va='center', fontweight='600')
+
+        # ── slit width annotation ─────────────────────────────────────
+        ax.annotate('', xy=(-1.0, a/2), xytext=(-1.0, -a/2),
+                    arrowprops=dict(arrowstyle='<->', color=CDK, lw=1.4))
+        ax.text(-1.35, 0, 'a', fontsize=13, color=CDK,
+                ha='center', va='center', fontweight='bold')
+
+        # ── incoming plane wavefronts ─────────────────────────────────
+        for xi in np.arange(-3.2, -0.05, lam):
+            ax.plot([xi, xi], [-Y_MAX, -a/2-0.15],
+                    color=CB, lw=1.1, alpha=0.40, zorder=2)
+            ax.plot([xi, xi], [ a/2+0.15, Y_MAX],
+                    color=CB, lw=1.1, alpha=0.40, zorder=2)
+        ax.annotate('', xy=(-0.55, 0), xytext=(-2.8, 0),
+                    arrowprops=dict(arrowstyle='->', color=CB, lw=1.8,
+                                   mutation_scale=16), zorder=9)
+        ax.text(-3.2, 0.6, 'Plane wave →', color=CB,
+                fontsize=8, fontweight='600', ha='left')
+
+        # ── screen ────────────────────────────────────────────────────
+        ax.plot([X_SC, X_SC], [-Y_MAX, Y_MAX],
+                color='#1e293b', lw=3.5, zorder=6, solid_capstyle='round')
+        ax.text(X_SC + 0.12, Y_MAX - 0.05, 'Screen',
+                color='#1e293b', fontsize=8, va='top', fontweight='600')
+
+        # ── L annotation ─────────────────────────────────────────────
+        y_L = -Y_MAX + 0.15
+        ax.annotate('', xy=(X_SC, y_L), xytext=(0, y_L),
+                    arrowprops=dict(arrowstyle='<->', color=CGR, lw=1.2,
+                                   mutation_scale=11))
+        ax.text(X_SC/2, y_L - 0.42, 'L  (distance to screen)',
+                ha='center', fontsize=8, color=CGR)
+
+        # ── nodal & antinodal lines ───────────────────────────────────
+        plotted_anti_label = False
+        for n in range(1, nmax+1):
+            sin_n = n * lam / a
+            if abs(sin_n) > 1: break
+            th_n = np.arcsin(sin_n)
+            for sign in [1, -1]:
+                y_sc = X_SC * np.tan(sign * th_n)
+                if abs(y_sc) > Y_MAX + 0.1: continue
+                kw = dict(color=CRED, lw=1.3, ls='--', alpha=0.80, zorder=4)
+                ax.plot([0, X_SC], [0, y_sc], **kw)
+                ax.plot(X_SC, y_sc, 'x', color=CRED, ms=6,
+                        markeredgewidth=1.6, zorder=7)
+                ax.text(X_SC+0.15, y_sc,
+                        f'N{n}  (dark)', color=CRED, fontsize=7.5,
+                        va='center', ha='left', fontweight='600')
+
+            # antinodal between n-1 and n (approximate midpoint angle)
+            sin_a = (n - 0.5) * lam / a
+            if abs(sin_a) <= 1:
+                th_a = np.arcsin(sin_a)
+                for sign in [1, -1]:
+                    y_sc = X_SC * np.tan(sign * th_a)
+                    if abs(y_sc) > Y_MAX + 0.1: continue
+                    ax.plot([0, X_SC], [0, y_sc],
+                            color=CG, lw=1.1, alpha=0.55,
+                            ls=':', zorder=3)
+
+        # central max
+        ax.plot([0, X_SC], [0, 0], color=CG, lw=2.4, alpha=0.9, zorder=4)
+        ax.plot(X_SC, 0, 'o', color=CG, ms=8, zorder=7,
+                markeredgecolor='white', markeredgewidth=1.4)
+        ax.text(X_SC+0.15, 0, 'A₀  Central max\n(brightest, widest)',
+                color=CG, fontsize=7.5, va='center', ha='left', fontweight='700')
+
+        # θ₁ angle arc
+        th1 = np.arcsin(lam / a)
+        ax.add_patch(Arc((0, 0), 2.6, 2.6, angle=0,
+                         theta1=0, theta2=np.degrees(th1),
+                         color=CPURP, lw=1.8, zorder=7))
+        ax.text(1.55, 0.28, 'θ₁', fontsize=10, color=CPURP, fontweight='bold')
+
+        # legend
+        leg_N = mpatches.Patch(color=CRED, label='Nodal line (dark fringe)')
+        leg_A = mpatches.Patch(color=CG,   label='Antinodal line (bright fringe)')
+        ax.legend(handles=[leg_A, leg_N], fontsize=7.5,
+                  loc='upper left', framealpha=0.92, edgecolor='#e2e8f0')
+
+        ax.set_title('Single-Slit Diffraction — geometry (a = 3λ  →  3 nodal lines per side)',
+                     fontsize=9.5, color=CDK, pad=6, fontweight='700')
+        fig.tight_layout(pad=0.4)
+    return fig
 
 
-def _badge(q: int) -> str:
-    if q not in st.session_state.results: return ""
-    res = st.session_state.results[q]
-    return " ✅" if all(res) else (" ⚠️" if any(res) else " ✗")
+@st.cache_data
+def _fig_pattern():
+    """Visual pattern: nodal/antinodal on the slit axis."""
+    with plt.rc_context(RC):
+        fig, ax = plt.subplots(figsize=(10, 3.6))
+        ax.set_facecolor(CBG)
+        fig.patch.set_facecolor(CBG)
+        ax.axis('off')
+
+        a = 6.0; lam = 2.0
+        nmax = int(a / lam)       # 3
+        total_node = 2 * nmax     # 6
+        total_anti = 2 * nmax - 1 # 5  (side antinodes) + central = 2nmax-1+1...
+        # antinodal lines: central (n=0) + (nmax-1) pairs each side? No:
+        # Between N1 and N2 is A1; between N2 and N3 is A2; beyond N3 nothing clean
+        # So antinodal side lines = nmax-1 pairs + central = 2(nmax-1)+1
+
+        ax.set_xlim(-1.5, 12.5)
+        ax.set_ylim(-1.8, 2.2)
+
+        # ruler line
+        ax.plot([-0.2, 10.5], [0, 0], color=CDK, lw=2.0,
+                solid_capstyle='round', zorder=5)
+        ax.text(10.7, 0, '→', color=CDK, fontsize=12, va='center')
+        ax.text(-0.5, 0, 'Slit\ncentre', fontsize=7.5, color=CPURP,
+                ha='right', va='center', fontweight='600')
+
+        # positions: nodal at x = n*(L_scale), antinodal between
+        L_scale = 1.6  # spacing unit
+
+        # central antinode at 0
+        ax.plot(0, 0, 'o', color=CG, ms=13, zorder=8,
+                markeredgecolor='white', markeredgewidth=2)
+        ax.text(0, 0.62, 'A₀', ha='center', fontsize=9,
+                color=CG, fontweight='bold')
+        ax.text(0, 0.24, 'Δr=0', ha='center', fontsize=6.5, color=CG)
+
+        for n in range(1, nmax+1):
+            xN = n * L_scale * 2        # nodal positions (symmetric each side shown on + axis)
+            xA = (n - 0.5) * L_scale * 2  # antinodal positions
+
+            # nodal (positive side)
+            ax.plot(xN, 0, 'v', color=CRED, ms=10, zorder=8,
+                    markeredgecolor='white', markeredgewidth=1.5)
+            ax.text(xN, -0.60, f'N{n}', ha='center', fontsize=8.5,
+                    color=CRED, fontweight='bold')
+            ax.text(xN, -1.05, f'sinθ={n}λ/a', ha='center', fontsize=6.5, color=CRED)
+
+            # antinodal (positive side), only if not too far
+            ax.plot(xA, 0, 'o', color=CG, ms=10, zorder=8,
+                    markeredgecolor='white', markeredgewidth=1.5)
+            ax.text(xA, 0.58, f'A{n}', ha='center', fontsize=8.5,
+                    color=CG, fontweight='bold')
+            ax.text(xA, 0.20, f'sinθ≈{n-.5:.1f}λ/a', ha='center', fontsize=6.5, color=CG)
+
+        # labels
+        ax.text(5.0, 1.9,
+                f'a = {int(a)} cm,  λ = {int(lam)} cm   →   '
+                f'n_max = {nmax}   →   Nodal lines = {total_node}',
+                ha='center', fontsize=9.5, fontweight='700', color=CDK,
+                bbox=dict(boxstyle='round,pad=0.35', fc='#f1f5f9',
+                          ec='#cbd5e1', lw=1.6))
+
+        legend_N = mpatches.Patch(color=CRED, label='Node  ▼  (dark, destructive)')
+        legend_A = mpatches.Patch(color=CG,   label='Antinode  ●  (bright, constructive)')
+        ax.legend(handles=[legend_A, legend_N], fontsize=8,
+                  loc='lower right', framealpha=0.95, edgecolor='#e2e8f0')
+
+        fig.tight_layout(pad=0.4)
+    return fig
 
 
-def _fmt(expected: float, tol: float, unit: str) -> str:
-    u = f" {unit}" if unit else ""
-    return f"{int(round(expected))}{u}" if tol == 0 else f"{expected:.4g}{u}"
+@st.cache_data
+def _fig_ref_table():
+    """Quick-reference comparison table as figure."""
+    with plt.rc_context(RC):
+        fig, ax = plt.subplots(figsize=(9, 3.2))
+        ax.set_facecolor(CBG)
+        fig.patch.set_facecolor(CBG)
+        ax.axis('off')
+
+        rows = [
+            ('Quantity',             'Formula',                    'Notes'),
+            ('Node condition',       'a sinθ = nλ',                'n = ±1, ±2, … (NOT n=0)'),
+            ('Max order (n_max)',    'n_max = floor(a / λ)',        'integer part of a/λ'),
+            ('Total nodal lines',   '2 × n_max',                   'symmetric about centre'),
+            ('Angle of nth node',   'sinθ_n = nλ / a',            'solve for θ'),
+            ('Approx antinode',     'sinθ ≈ (n − ½)λ / a',        'between N(n−1) and Nn'),
+        ]
+
+        col_w = [0.28, 0.38, 0.34]
+        col_x = [0.01, 0.29, 0.67]
+        row_h = 1.0 / len(rows)
+
+        for r_idx, row in enumerate(rows):
+            y = 1.0 - r_idx * row_h
+            bg = '#1e3a8a' if r_idx == 0 else ('#f8fafc' if r_idx % 2 == 0 else '#fff')
+            fc = '#fff'    if r_idx == 0 else CDK
+            fw = 'bold'
+            ax.add_patch(Rectangle((0, y - row_h), 1, row_h,
+                                   fc=bg, ec='#e2e8f0', lw=0.7,
+                                   transform=ax.transAxes, clip_on=False))
+            for c_idx, (cell, cx) in enumerate(zip(row, col_x)):
+                ax.text(cx + 0.01, y - row_h/2, cell,
+                        transform=ax.transAxes,
+                        fontsize=8.5 if r_idx == 0 else 8.8,
+                        va='center', ha='left',
+                        color=fc if r_idx == 0 else (CB if c_idx == 1 else CDK),
+                        fontweight='bold' if r_idx == 0 or c_idx == 1 else 'normal',
+                        fontfamily='monospace' if c_idx == 1 and r_idx > 0 else 'sans-serif')
+
+        ax.set_xlim(0, 1); ax.set_ylim(0, 1)
+        fig.tight_layout(pad=0.3)
+    return fig
 
 
-def _progress() -> tuple[int, int]:
-    done = sum(1 for q, r in st.session_state.results.items() if r and all(r))
-    return done, len(questions)
+# ── Main render function ──────────────────────────────────────────────────────
 
+def render_diffraction():
+    st.markdown(_CSS, unsafe_allow_html=True)
+    st.markdown('<div class="dif-wrap">', unsafe_allow_html=True)
 
-# ═══════════════════════════════════════════════════════════════════════════════
-# SIDEBAR
-# ═══════════════════════════════════════════════════════════════════════════════
-with st.sidebar:
-    # ── App title ──────────────────────────────────────────────────────────
+    # ── Title ─────────────────────────────────────────────────────────────────
     st.markdown("""
-    <div style="padding: 16px 4px 8px;">
-        <div class="sidebar-title">🌊 คลื่นกล — ม.5</div>
-        <div class="sidebar-sub">Physics Exercise Platform</div>
+    <div class="dif-h1">🔬 Diffraction — Single-Slit & Double-Slit</div>
+    """, unsafe_allow_html=True)
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # 01 — What is Diffraction?
+    # ══════════════════════════════════════════════════════════════════════════
+    st.markdown('<div class="dif-h2">01 — What is Diffraction?</div>', unsafe_allow_html=True)
+    st.markdown("""
+    <div class="dif-card">
+      <div class="dif-grid">
+        <div class="dif-info">
+          <b>Definition</b><br>
+          When a wave passes through a narrow slit or past an obstacle,
+          it <b>bends and spreads</b> into the geometric shadow region.<br><br>
+          <b>Key condition:</b> diffraction is significant when<br>
+          &emsp;slit width <b>a ≈ λ</b>  (wavelength ~ slit size)<br><br>
+          If a ≫ λ → almost no bending (ray-like)<br>
+          If a ≪ λ → nearly circular spread (point source)
+        </div>
+        <div class="dif-info">
+          <b>Huygens' Principle</b><br>
+          Every point on a wavefront acts as a new point source of secondary waves.
+          The slit lets through a strip of wavefront → each point inside the slit
+          radiates outward → the secondary waves <b>interfere</b> to create a
+          pattern of bright and dark bands on a screen.<br><br>
+          <span class="dif-tag tag-blue">Diffraction</span>
+          <span class="dif-tag tag-purp">Interference</span>
+          are two sides of the same phenomenon.
+        </div>
+      </div>
     </div>
     """, unsafe_allow_html=True)
 
-    # ── Progress bar ───────────────────────────────────────────────────────
-    done, total = _progress()
-    pct = done / total
-    st.markdown(f"""
-    <div style="margin: 0 0 4px 0;">
-        <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
-            <span style="font-size:0.68rem;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;">ความก้าวหน้า</span>
-            <span style="font-size:0.68rem;color:#94a3b8;">{done}/{total} ข้อ</span>
-        </div>
-        <div style="background:#1e293b;border-radius:4px;height:5px;overflow:hidden;">
-            <div style="background:linear-gradient(90deg,#2563eb,#38bdf8);width:{pct*100:.0f}%;height:100%;border-radius:4px;transition:width 0.3s;"></div>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-
-    st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
-
-    # ── Export button ──────────────────────────────────────────────────────
-    if st.button("📄 สร้างไฟล์โจทย์ทั้งหมด",
-                 use_container_width=True, key="gen_pdf_btn"):
-        with st.spinner("กำลังสร้างไฟล์..."):
-            from pdf_export import generate_problems_pdf
-            st.session_state["_pdf_bytes"] = generate_problems_pdf(
-                questions, get_plot_for_question
-            )
-
-    if "_pdf_bytes" in st.session_state:
-        st.download_button(
-            "⬇ ดาวน์โหลด HTML → เปิด → Ctrl+P",
-            data=st.session_state["_pdf_bytes"],
-            file_name="physics_problems.html",
-            mime="text/html",
-            use_container_width=True,
-            key="dl_pdf_btn",
-            type="primary",
-        )
-
-    st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
-    st.markdown("<hr style='border-color:#1e293b;margin:8px 0;'>", unsafe_allow_html=True)
-
-    # ── Question navigation ────────────────────────────────────────────────
-    for topic_name, q_nums in TOPICS:
-        st.markdown(
-            f'<p class="topic-label">{topic_name}</p>',
-            unsafe_allow_html=True,
-        )
-        for row_start in range(0, len(q_nums), 6):
-            row  = q_nums[row_start: row_start + 6]
-            cols = st.columns(len(row))
-            for col, qn in zip(cols, row):
-                is_active = st.session_state.selected_q == qn
-                label     = f"{qn}{_badge(qn)}"
-                if col.button(label, key=f"nav_{qn}",
-                              type="primary" if is_active else "secondary",
-                              use_container_width=True):
-                    _select(qn)
+    # ══════════════════════════════════════════════════════════════════════════
+    # 02 — Single-Slit Geometry
+    # ══════════════════════════════════════════════════════════════════════════
+    st.markdown('<div class="dif-h2">02 — Single-Slit: Geometry & Nodal Lines</div>',
+                unsafe_allow_html=True)
 
     st.markdown("""
-    <div style="padding:16px 0 4px;text-align:center;font-size:0.65rem;color:#334155;">
-        ฟิสิกส์ ม.5 · Streamlit
+    <div class="dif-card">
+      <div class="dif-card-title">Key formula — dark fringe (node) condition</div>
+      <div class="dif-formula">a · sinθ = n · λ &emsp;&emsp; n = ±1, ±2, ±3, …</div>
+      <div class="dif-grid" style="margin-top:12px">
+        <div class="dif-hl">
+          <b>a</b> = slit width (cm or m)<br>
+          <b>θ</b> = angle from the central axis to the nodal line<br>
+          <b>λ</b> = wavelength<br>
+          <b>n</b> = order number &nbsp;(n = 1 is the 1st dark fringe, etc.)
+        </div>
+        <div class="dif-hl dif-hl-r">
+          ⚠️ <b>n = 0 is NOT a node</b> — the centre is always the
+          bright central maximum (A₀).<br><br>
+          Nodes exist only for <b>n = ±1, ±2, ±3, …</b>
+        </div>
+      </div>
     </div>
     """, unsafe_allow_html=True)
 
+    st.image(_fig_geometry(), use_container_width=True)
 
-# ═══════════════════════════════════════════════════════════════════════════════
-# MAIN TABS
-# ═══════════════════════════════════════════════════════════════════════════════
-tab_exercise, tab_summary, tab_standing = st.tabs([
-    "📚  แบบฝึกหัด",
-    "📖  สรุป: การแทรกสอด",
-    "🎵  สรุป: คลื่นนิ่ง / สั่นพ้อง",
-])
-
-with tab_summary:
-    render_summary()
-
-with tab_standing:
-    render_standing_waves()
-
-with tab_exercise:
-    i        = st.session_state.selected_q
-    q_text   = render_math(questions[i - 1])
-    key_data = ANSWER_KEYS.get(i)
-    answer   = ANSWERS.get(i)
-    topic_of_q = next((t for t, qs in TOPICS if i in qs), "")
-    badge_str  = _badge(i)
-
-    # ── Question header ───────────────────────────────────────────────────
-    col_title, col_nav = st.columns([8, 1], gap="small")
-
-    with col_title:
-        st.markdown(f"""
-        <div class="q-header-bar">
-            <span class="q-num-badge">ข้อที่ {i}</span>
-            <span class="topic-chip">{topic_of_q}</span>
-            {'<span style="font-size:1.1rem;">'+badge_str.strip()+'</span>' if badge_str.strip() else ''}
+    # ══════════════════════════════════════════════════════════════════════════
+    # 03 — Counting Lines
+    # ══════════════════════════════════════════════════════════════════════════
+    st.markdown('<div class="dif-h2">03 — Counting Nodal & Antinodal Lines</div>',
+                unsafe_allow_html=True)
+    st.markdown("""
+    <div class="dif-card">
+      <div class="dif-grid3">
+        <div class="dif-info" style="border-left:4px solid #dc2626;">
+          <b style="color:#dc2626">Maximum order</b><br><br>
+          <code style="font-size:1rem">n_max = floor(a / λ)</code><br><br>
+          Take the <b>integer part</b> of a/λ.<br>
+          (sinθ cannot exceed 1, so n·λ/a ≤ 1 → n ≤ a/λ)
         </div>
-        """, unsafe_allow_html=True)
-
-    with col_nav:
-        st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
-        n1, n2 = st.columns(2)
-        if n1.button("◀", disabled=(i <= 1), use_container_width=True, key="prev"):
-            _select(i - 1)
-        if n2.button("▶", disabled=(i >= len(questions)), use_container_width=True, key="next"):
-            _select(i + 1)
-
-    st.markdown("<hr style='margin:10px 0 18px'>", unsafe_allow_html=True)
-
-    # ── Two-column layout ─────────────────────────────────────────────────
-    left, right = st.columns([11, 9], gap="large")
-
-    # ── LEFT: Question + input ────────────────────────────────────────────
-    with left:
-        # Question text in a card
-        st.markdown(f"""
-        <div class="card" style="margin-bottom:16px;line-height:1.9;font-size:1.0rem;">
-            {q_text}
+        <div class="dif-info" style="border-left:4px solid #dc2626;">
+          <b style="color:#dc2626">Total nodal lines</b><br><br>
+          <code style="font-size:1rem">= 2 × n_max</code><br><br>
+          One set on each side of centre.<br>
+          e.g. n_max=3 → N1, N2, N3 per side → <b>6 nodal lines</b>
         </div>
-        """, unsafe_allow_html=True)
+        <div class="dif-info" style="border-left:4px solid #16a34a;">
+          <b style="color:#16a34a">Antinodal lines</b><br><br>
+          Central bright band = <b>A₀</b><br>
+          Side bright bands: <b>A₁, A₂, …</b> appear <em>between</em> nodal lines<br>
+          (between N(n−1) and Nn)
+        </div>
+      </div>
 
-        png = _figure_png(i)
-        if png:
-            st.image(png, use_container_width=True)
+      <div style="margin-top:14px">
+        <div class="dif-hl dif-hl-g" style="margin-bottom:8px">
+          <b>Example:</b>&ensp; a = 6 cm, λ = 2 cm<br>
+          &emsp;n_max = floor(6/2) = <b>3</b><br>
+          &emsp;Nodal lines = 2 × 3 = <b>6 lines</b>&ensp; (N1, N2, N3 on each side)
+        </div>
+        <div class="dif-hl dif-hl-g">
+          <b>Example:</b>&ensp; a = 8 cm, λ = 2.5 cm<br>
+          &emsp;n_max = floor(8/2.5) = floor(3.2) = <b>3</b><br>
+          &emsp;Nodal lines = 2 × 3 = <b>6 lines</b>&ensp;(not 6.4 — always round down)
+        </div>
+      </div>
+    </div>
+    """, unsafe_allow_html=True)
 
-        # Answer input section
-        st.markdown("<div class='input-section-label'>✏️ กรอกคำตอบ</div>",
-                    unsafe_allow_html=True)
+    st.image(_fig_pattern(), use_container_width=True)
 
-        if key_data is None:
-            st.info("📝 ข้อนี้ตรวจโดยดูจากเฉลยละเอียด")
-            st.text_area("บันทึกคำตอบ / แนวคิด", key=f"note_{i}", height=80,
-                         label_visibility="collapsed",
-                         placeholder="จดแนวคิดหรือคำตอบของคุณที่นี่...")
-        else:
-            n = len(key_data)
-            cols = st.columns(min(n, 2))
-            for j, (label, exp, unit, tol) in enumerate(key_data):
-                unit_lbl = f" ({unit})" if unit else ""
-                with cols[j % min(n, 2)]:
-                    st.text_input(
-                        f"{label}{unit_lbl}",
-                        key=f"ans_{i}_{j}",
-                        placeholder=f"เช่น {_fmt(exp, tol, '')}",
-                    )
+    # ══════════════════════════════════════════════════════════════════════════
+    # 04 — Finding the Angle
+    # ══════════════════════════════════════════════════════════════════════════
+    st.markdown('<div class="dif-h2">04 — Finding the Angle of a Nodal Line</div>',
+                unsafe_allow_html=True)
+    st.markdown("""
+    <div class="dif-card">
+      <div class="dif-formula">sinθ_n = n · λ / a &emsp;→&emsp; θ_n = arcsin(nλ/a)</div>
+      <div class="dif-grid" style="margin-top:12px">
+        <div class="dif-hl">
+          <b>Example — nth dark fringe angle:</b><br>
+          a = 8 cm, λ = 2.5 cm, find θ₂<br><br>
+          sinθ₂ = 2 × 2.5 / 8 = 5/8 = 0.625<br>
+          θ₂ = arcsin(0.625) ≈ <b>38.7°</b>
+        </div>
+        <div class="dif-hl dif-hl-p">
+          <b>Approximate antinodal angle:</b><br>
+          A<sub>n</sub> lies <em>roughly</em> halfway between N<sub>n−1</sub> and N<sub>n</sub><br><br>
+          sinθ_A ≈ (n − ½) · λ / a<br><br>
+          e.g. A₁ between N₀(centre) and N₁:<br>
+          sinθ ≈ 0.5 × 2.5/8 = 0.156 → θ ≈ 9°<br>
+          <em style="font-size:.78rem">(not exact — just an approximation)</em>
+        </div>
+      </div>
+    </div>
+    """, unsafe_allow_html=True)
 
-            if st.button("✅ ตรวจคำตอบ", key=f"btn_{i}",
-                         type="primary", use_container_width=True):
-                res = [
-                    check_answer(st.session_state.get(f"ans_{i}_{j}", ""), exp, tol)
-                    for j, (_, exp, _, tol) in enumerate(key_data)
-                ]
-                st.session_state.results[i] = res
+    # ══════════════════════════════════════════════════════════════════════════
+    # 05 — Changing a or λ
+    # ══════════════════════════════════════════════════════════════════════════
+    st.markdown('<div class="dif-h2">05 — Effect of Changing a or λ</div>',
+                unsafe_allow_html=True)
+    st.markdown("""
+    <div class="dif-card">
+      <div class="dif-formula">n_max = floor(a / λ) &emsp;→&emsp; n_new = floor(a_new / λ_new)</div>
+      <div style="margin-top:10px" class="dif-hl dif-hl-g">
+        <b>Worked example (Q65-type):</b><br>
+        Original: 6 nodal lines → n_max = 3 → a/λ = 3<br>
+        Change: a becomes 2a, frequency becomes f/3 → λ becomes 3λ<br><br>
+        n_new = floor(2a / 3λ) = floor(⅔ × 3) = floor(2) = <b>2</b><br>
+        New nodal lines = 2 × 2 = <b>4 lines</b>
+      </div>
+      <div style="margin-top:10px">
+        <table style="width:100%;font-size:.83rem;border-collapse:collapse">
+          <tr>
+            <th style="background:#1e3a8a;color:#fff;padding:6px 10px;text-align:left">Change</th>
+            <th style="background:#1e3a8a;color:#fff;padding:6px 10px;text-align:left">Effect on n_max</th>
+            <th style="background:#1e3a8a;color:#fff;padding:6px 10px;text-align:left">Effect on pattern</th>
+          </tr>
+          <tr style="background:#f8fafc">
+            <td style="padding:6px 10px;border-bottom:1px solid #e2e8f0">Wider slit (a↑)</td>
+            <td style="padding:6px 10px;border-bottom:1px solid #e2e8f0">n_max ↑</td>
+            <td style="padding:6px 10px;border-bottom:1px solid #e2e8f0">More nodal lines, narrower central max</td>
+          </tr>
+          <tr>
+            <td style="padding:6px 10px;border-bottom:1px solid #e2e8f0">Narrower slit (a↓)</td>
+            <td style="padding:6px 10px;border-bottom:1px solid #e2e8f0">n_max ↓</td>
+            <td style="padding:6px 10px;border-bottom:1px solid #e2e8f0">Fewer lines, wider central max (more spreading)</td>
+          </tr>
+          <tr style="background:#f8fafc">
+            <td style="padding:6px 10px;border-bottom:1px solid #e2e8f0">Longer λ (↑)</td>
+            <td style="padding:6px 10px;border-bottom:1px solid #e2e8f0">n_max ↓</td>
+            <td style="padding:6px 10px;border-bottom:1px solid #e2e8f0">Fewer lines, larger angles, more diffraction</td>
+          </tr>
+          <tr>
+            <td style="padding:6px 10px">Shorter λ (↓)</td>
+            <td style="padding:6px 10px">n_max ↑</td>
+            <td style="padding:6px 10px">More lines, smaller angles, less diffraction</td>
+          </tr>
+        </table>
+      </div>
+    </div>
+    """, unsafe_allow_html=True)
 
-            if i in st.session_state.results:
-                st.markdown("<div style='margin-top:10px'></div>", unsafe_allow_html=True)
-                for is_ok, (label, exp, unit, tol) in zip(
-                        st.session_state.results[i], key_data):
-                    ans_str = _fmt(exp, tol, unit)
-                    if is_ok:
-                        st.success(f"✓  {label} — ถูกต้อง!")
-                    else:
-                        st.error(f"✗  {label} — ยังไม่ถูก  |  เฉลย: **{ans_str}**")
+    # ══════════════════════════════════════════════════════════════════════════
+    # 06 — Double Slit (brief)
+    # ══════════════════════════════════════════════════════════════════════════
+    st.markdown('<div class="dif-h2">06 — Double-Slit (Review)</div>', unsafe_allow_html=True)
+    st.markdown("""
+    <div class="dif-card">
+      <div class="dif-card-title">Two point sources separated by d — same as interference</div>
+      <div class="dif-grid">
+        <div class="dif-hl dif-hl-g">
+          <b style="color:#16a34a">Antinodal (constructive)</b><br>
+          Δr = nλ &emsp; n = 0, 1, 2, …<br><br>
+          n_max = floor(d / λ)<br>
+          Total antinodal lines = <b>2·n_max + 1</b>
+        </div>
+        <div class="dif-hl dif-hl-r">
+          <b style="color:#dc2626">Nodal (destructive)</b><br>
+          Δr = (n − ½)λ &emsp; n = 1, 2, …<br><br>
+          Total nodal lines = <b>2·n_max</b>
+        </div>
+      </div>
+      <div class="dif-hl dif-hl-g" style="margin-top:10px">
+        <b>Example (Q68):</b>&ensp; d = 8 cm, Δr = 4 cm → λ = 2 cm<br>
+        n_max = floor(8/2) = 4<br>
+        Antinodal: 2×4+1 = <b>9 lines</b> &emsp; Nodal: 2×4 = <b>8 lines</b>
+      </div>
+    </div>
+    """, unsafe_allow_html=True)
 
-    # ── RIGHT: Answer panel ───────────────────────────────────────────────
-    with right:
-        with st.container(border=True):
-            st.markdown("""
-            <div style="
-                background: linear-gradient(135deg,#1e40af,#2563eb);
-                color: white;
-                border-radius: 6px;
-                padding: 9px 14px;
-                font-size: 0.85rem;
-                font-weight: 700;
-                letter-spacing: 0.03em;
-                margin: -1px -1px 14px -1px;
-            ">📖 &nbsp;เฉลยละเอียด</div>
-            """, unsafe_allow_html=True)
+    # ══════════════════════════════════════════════════════════════════════════
+    # REF — Formula Reference
+    # ══════════════════════════════════════════════════════════════════════════
+    st.markdown('<div class="dif-h2">📋 Formula Reference</div>', unsafe_allow_html=True)
+    st.image(_fig_ref_table(), use_container_width=True)
 
-            if not st.session_state.show_ans:
-                st.markdown("""
-                <div style="text-align:center;padding:40px 16px;color:#94a3b8;">
-                    <div style="font-size:2rem;margin-bottom:8px;">🔒</div>
-                    <div style="font-size:0.88rem;">กดปุ่มด้านล่างเพื่อเปิดเฉลย</div>
-                </div>
-                """, unsafe_allow_html=True)
-            else:
-                if answer:
-                    st.markdown(answer)
-                else:
-                    st.info("ยังไม่มีเฉลยสำหรับข้อนี้")
+    st.markdown("""
+    <div class="dif-card" style="margin-top:10px">
+      <div class="dif-grid3">
+        <div class="dif-info">
+          <b>3-Step method</b><br>
+          1. Find n_max = floor(a/λ)<br>
+          2. Total nodal = 2 × n_max<br>
+          3. Use sinθ = nλ/a for angles
+        </div>
+        <div class="dif-info">
+          <b>Trap to avoid</b><br>
+          Don't round a/λ up.<br>
+          Always use <b>floor</b> (integer part).<br>
+          e.g. a/λ = 3.9 → n_max = <b>3</b>, not 4
+        </div>
+        <div class="dif-info">
+          <b>Double slit</b><br>
+          Antinodal: 2·n_max + 1<br>
+          Nodal: 2·n_max<br>
+          where n_max = floor(d/λ)
+        </div>
+      </div>
+    </div>
+    """, unsafe_allow_html=True)
 
-        btn_label = "🙈  ซ่อนเฉลย" if st.session_state.show_ans else "👁  แสดงเฉลย"
-        if st.button(btn_label, key="toggle_ans", use_container_width=True):
-            st.session_state.show_ans = not st.session_state.show_ans
+    st.markdown('</div>', unsafe_allow_html=True)   # close dif-wrap
